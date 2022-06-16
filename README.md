@@ -1,4 +1,6 @@
 # l4d_lootboxes
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 When special infected are killed a Loot Box will be created. Opening it can lead into useful items or chaotic events.
 
         Special infected can drop a Loot Box when killed.
