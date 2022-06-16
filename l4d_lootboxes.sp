@@ -1,27 +1,26 @@
 /**
- * ================================================================================ *
- *                                [L4D] Loot Boxes                                  *
- * -------------------------------------------------------------------------------- *
- *  Author      :   Eärendil                                                        *
- *  Descrp      :   Zombies drop boxes with good or bad results                     *
- *  Version     :   1.0                                                             *
- *  Link      : https://forums.alliedmods.net/showthread.php?p=2781646#post2781646  *
- * ================================================================================ *
- *                                                                                  *
- *  CopyRight (C) 2022 Eduardo "Eärendil" Chueca                                    *
- * -------------------------------------------------------------------------------- *
- *  This program is free software; you can redistribute it and/or modify it under   *
- *  the terms of the GNU General Public License, version 3.0, as published by the   *
- *  Free Software Foundation.                                                       *
- *                                                                                  *
- *  This program is distributed in the hope that it will be useful, but WITHOUT     *
- *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   *
- *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more          *
- *  details.                                                                        *
- *                                                                                  *
- *  You should have received a copy of the GNU General Public License along with    *
- *  this program.  If not, see <http://www.gnu.org/licenses/>.                      *
- * ================================================================================ *
+ * ======================================================================================== *
+ *                               [L4D & L4D2] Loot Boxes                                    *
+ * ---------------------------------------------------------------------------------------- *
+ *  Author      :   Eärendil                                                                *
+ *  Descrp      :   Zombies drop boxes with good or bad results                             *
+ *  Version     :   1.1                                                                     *
+ *  Link        :   https://forums.alliedmods.net/showthread.php?p=2781646#post2781646      *
+ * ======================================================================================== *
+ *                                                                                          *
+ *  CopyRight (C) 2022 Eduardo "Eärendil" Chueca                                            *
+ * ---------------------------------------------------------------------------------------- *
+ *  This program is free software; you can redistribute it and/or modify it under the       *
+ *  terms of the GNU General Public License, version 3.0, as published by the Free          *
+ *  Software Foundation.                                                                    *
+ *                                                                                          *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY         *
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A         *
+ *  PARTICULAR PURPOSE. See the GNU General Public License for more details.                *
+ *                                                                                          *
+ *  You should have received a copy of the GNU General Public License along with            *
+ *  this program. If not, see <http://www.gnu.org/licenses/>.                               *
+ * ======================================================================================== *
  */
 
 #pragma semicolon 1
@@ -34,8 +33,9 @@
 #include <survivorutilities>
 #include <weaponhandling>
 
-#define PLUGIN_VERSION		"1.0b"
+#define PLUGIN_VERSION		"1.1"
 #define FCVAR_FLAGS			FCVAR_NOTIFY
+// Limit entities to prevent server crashes due to entity limit
 #define MAX_LBOXES			64
 #define MAX_TOXCLOUD		8
 #define MAX_WEAPONS			96
@@ -45,11 +45,12 @@
 #define MODEL_BARREL		"models/props_industrial/barrel_fuel.mdl"
 #define MODEL_BARRELA		"models/props_industrial/barrel_fuel_parta.mdl"
 #define MODEL_BARRELB		"models/props_industrial/barrel_fuel_partb.mdl"
+#define MODEL_FIREWORK		"models/props_junk/explosive_box001.mdl"
 #define MODEL_GASCAN		"models/props_junk/gascan001a.mdl"
 #define MODEL_PROPANETANK	"models/props_junk/propanecanister001a.mdl"
 #define MODEL_OXYGENTANK	"models/props_equipment/oxygentank01.mdl"
 
-#define TN_BOX				"Lootbox.Entity.Crate"	// Box entity targetname
+//#define TN_BOX				"Lootbox.Entity.Crate"	// Box entity targetname
 #define PARTICLE_BOOMER		"boomer_explode"
 #define PARTICLE_EMBERS		"embers_small_01"
 #define PARTICLE_SMOKE		"apc_wheel_smoke1"
@@ -60,39 +61,60 @@
 #define SND_BOOMER_EXPL		"player/boomer/explode/explo_medium_09.wav"
 #define SND_GOOD_OPEN		"level/gnomeftw.wav"
 #define SND_BAD_OPEN		"ui/pickup_scifi37.wav"
-#define SND_BOOST_START		"ui/holdout_playerrec.wav"
+#define SND_BOOST_START		"ui/survival_playerrec.wav"
 #define SND_BOOST_END		"ui/beep22.wav"
 #define SND_REGEN			"player/heartbeatloop.wav"
-#define SND_FIRE			"music/zombat/horde_01.wav"
-#define SND_THANOS			"ui/holdout_medal.wav"
+#define SND_FIRE			"music/tank/onebadtank.wav"
+#define SND_THANOS			"ui/survival_medal.wav"
 #define SND_CHOKE			"player/survivor/voice/choke_5.wav"
 #define SND_DENY			"player/suit_denydevice.wav"
-#define SND_SHIELD			"physics/metal/metal_barrel_impact_soft1.wav"
-#define SND_EXPL1			"player/boomer/explode/explo_medium_09.wav"
-#define SND_EXPL2			"player/boomer/explode/explo_medium_10.wav"
-#define SND_EXPL3			"player/boomer/explode/explo_medium_14.wav"
-#define SND_BEARTRAP		"doors/door_metal_thin_close2.wav"
+#define SND_SHIELD			"ui/gascan_spawn.wav"
+#define SND_EXPL1			"weapons/flaregun/gunfire/flaregun_explode_1.wav"
+#define SND_EXPL2			"weapons/flaregun/gunfire/flaregun_fire_1.wav"
+#define SND_EXPL3			"animation/plane_engine_explode.wav"
+#define SND_BEARTRAP		"weapons/machete/machete_impact_flesh1.wav"
+// Just some sounds for Left 4 Dead, because this game is missing some sounds
+#define SND_GOOD_OPEN_1		"ui/bigreward.wav"
+#define SND_BOOST_START_1	"ui/holdout_playerrec.wav"
+#define SND_FIRE_1			"music/zombat/horde_01.wav"
+#define SND_THANOS_1		"ui/holdout_medal.wav"
+#define SND_SHIELD_1		"physics/metal/metal_barrel_impact_soft1.wav"
+#define SND_BEARTRAP_1		"doors/door_metal_thin_close2.wav"
 
-#define POS_WEIGHTS			"35,100,30,60,10,45,65,5,5,5,5,5,5,5"
-#define NEG_WEIGHTS			"100,60,100,50,20,15,40,15,50,60,15,25,40,85"
-#define SI_CHANCES			"8.0,8.0,8.0"
-#define BOOST_TIMES			"30.0,25.0,20.0,30.0,25.0,15.0"
-#define NERF_TIMES			"60.0,25.0,50.0"
 
-#define ZC_SMOKER			1
-#define ZC_BOOMER			2
-#define ZC_HUNTER			3
-#define ZC_TANK				5
+#define POS_WEIGHTS			"35,100,15,30,60,10,45,65,35,10,5,5,5,5,5,5,5"			// 17 values in total
+#define NEG_WEIGHTS			"100,60,100,50,50,20,15,85,40,15,50,60,15,25,40,55,85"	// 17 values in total
+#define SI_CHANCES			"8.0,8.0,8.0,8.0,8.0,8.0"			// 6 values, one for each special
+#define BOOST_TIMES			"30.0,25.0,20.0,30.0,25.0,15.0"		// 6 values
+#define NERF_TIMES			"60.0,25.0,50.0"					// 3 values
+// Because L4D has less special infected and box options
+#define POS_WEIGHTS_1		"35,100,30,60,10,45,65,5,5,5,5,5,5,5"
+#define NEG_WEIGHTS_1		"100,60,100,50,20,15,40,15,50,60,15,25,40,85"
+#define SI_CHANCES_1		"8.0,8.0,8.0"
+
+
+// I Only use jockey and tank for spawns, but I will preserve it, just in case
+// #define ZC_SMOKER			1
+// #define ZC_BOOMER			2
+// #define ZC_HUNTER			3
+// #define ZC_SPITTER			4
+#define ZC_JOCKEY			5
+// #define ZC_CHARGER			6 
+#define ZC_TANK				8
+#define ZC_TANK_1			5	// In left 4 dead tank index is 5 instead of 8
 
 enum 
 {
 	POS_T1,
 	POS_T2,
+	POS_T3,
 	POS_SECNDARY,
 	POS_DRUGS,
 	POS_MEDS,
 	POS_THROW,
 	POS_ITEM,
+	POS_UPGRADE,
+	POS_LASER,
 	POS_SPEED,
 	POS_INVUL,
 	POS_REGEN,
@@ -108,9 +130,11 @@ enum
 	NEG_MOB,
 	NEG_PANIC,
 	NEG_VOMIT,
+	NEG_SPIT,
 	NEG_WITCH,
 	NEG_TANK,
 	NEG_TOXIC,
+	NEG_JOCKEY,
 	NEG_BARREL,
 	NEG_BLACKWHITE,
 	NEG_FROZEN,
@@ -118,8 +142,47 @@ enum
 	NEG_FRAGILE,
 	NEG_BEARTRAP,
 	NEG_ANGLES,
+	NEG_FIREWORK,
 	NEG_FULLSI,
 	NEG_SIZE
+};
+//	L4D box opens
+enum
+{
+	POS_T1_1,
+	POS_T2_1,
+	POS_SECNDARY_1,
+	POS_DRUGS_1,
+	POS_MEDS_1,
+	POS_THROW_1,
+	POS_ITEM_1,
+	POS_SPEED_1,
+	POS_INVUL_1,
+	POS_REGEN_1,
+	POS_FIRE_1,
+	POS_IAMMO_1,
+	POS_EXPL_1,
+	POS_THANOS_1,
+	POS_SIZE_1
+}
+
+enum
+{
+	NEG_MOB_1,
+	NEG_PANIC_1,
+	NEG_VOMIT_1,
+	NEG_WITCH_1,
+	NEG_TANK_1,
+	NEG_TOXIC_1,
+	NEG_BARREL_1,
+	NEG_BLACKWHITE_1,
+	NEG_FROZEN_1,
+	NEG_REVERSE_1,
+	NEG_FRAGILE_1,
+	NEG_BEARTRAP_1,
+	NEG_ANGLES_1,
+	NEG_FULLSI_1,
+	NEG_SIZE_1
 };
 
 // Store player boost and nerfs as bits in only one integer, instead of separated values
@@ -137,6 +200,12 @@ enum ( <<= 1 )
 	PN_ANGLES
 };
 
+// Melee weapon list for melee spawn
+static char g_sMeleeList[][] = { "fireaxe", "golfclub", "machete", "katana", "baseball_bat", "cricket_bat", "tonfa" };
+// 3 different vectors with a separation of 120 degrees, aproximated and hardcoded to prevent making useless calculations
+// Z-axis ommited because is generated in the spitter function
+static float g_fTriSpitForces[3][2] = { { 150.0, 0.0}, { -75.0, 129.9 }, { -75.0, -129.9 } };
+
 // Plugin Start ConVars and variables
 ConVar g_hAllow;
 ConVar g_hGameModes;
@@ -144,20 +213,21 @@ ConVar g_hCurrGamemode;
 bool g_bAllowedGamemode;
 bool g_bPluginOn;
 
-// Plugin entity variables
+// Variables for storing entity references
 int g_iLootBoxEnt[MAX_LBOXES];
 int g_iToxCloudEnt[MAX_TOXCLOUD];
 int g_iWeaponEnt[MAX_WEAPONS];
 int g_iToxCloudCounter[MAX_TOXCLOUD];
+// Entity timers
 Handle g_hLootBoxTimer[MAX_LBOXES];
 Handle g_hToxCloudTimer[MAX_TOXCLOUD];
 Handle g_hWeaponUnlockTimer[MAX_WEAPONS];
 Handle g_hWeaponDeleteTimer[MAX_WEAPONS];
 
 // ConVar variables
-int g_iPosWeights[POS_SIZE], g_iPosWeightSum;
-int g_iNegWeights[NEG_SIZE], g_iNegWeightSum;
-float g_fSpecialDrops[7];
+int g_iPosWeights[POS_SIZE], g_iPosWeightSum; // For positive rolls
+int g_iNegWeights[NEG_SIZE], g_iNegWeightSum; // For negative rolls
+float g_fSpecialDrops[6];
 float g_fBoostTimes[6];
 float g_fNerfTimes[3];
 int g_iTankDrops[2];
@@ -182,6 +252,7 @@ ConVar g_hIntoxChance;
 ConVar g_hToxicHits;
 ConVar g_hBleedHits;
 ConVar g_hFreezeTime;
+ConVar g_hFragilityMult;
 
 // Player variables & handles
 bool g_bPlayerAdvert[MAXPLAYERS + 1];
@@ -202,11 +273,12 @@ Handle g_hPlayerFragileTimer[MAXPLAYERS + 1];
 Handle g_hPlayerAnglesTimer[MAXPLAYERS + 1];
 
 // Some global variables
-int g_iNextMobSize = -1;
+int g_iNextMobSize = -1; // To override mob sizes
+bool g_bL4D2;
 
 public Plugin myinfo =
 {
-	name = "[L4D] Loot Boxes",
+	name = "[L4D & L4D2] LootBoxes",
 	author = "Eärendil",
 	description = "Zombies drop Loot Boxes that contains random things.",
 	version = PLUGIN_VERSION,
@@ -215,9 +287,11 @@ public Plugin myinfo =
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	if( GetEngineVersion() != Engine_Left4Dead )
+	if( GetEngineVersion() == Engine_Left4Dead2 )
+		g_bL4D2 = true;
+	else if( GetEngineVersion() != Engine_Left4Dead )
 	{
-		strcopy(error, err_max, "Plugin only supports Left 4 Dead");
+		strcopy(error, err_max, "Plugin only supports Left 4 Dead 1 & 2");
 		return APLRes_SilentFailure;		
 	}
 
@@ -228,35 +302,42 @@ public void OnPluginStart()
 {
 	CreateConVar("lootboxes_version",			PLUGIN_VERSION,			"Loot Boxes plugin version",		FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
-	g_hAllow =			CreateConVar("l4d2_lootbox_enable",					"1",				"1 = Plugin On. 0 = Plugin Off.", FCVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hGameModes =		CreateConVar("l4d2_lootbox_gamemodes",				"",					"Enable plugin in these gamemodes, separated by commas, no spaces.\nEmpty to allow all.", FCVAR_FLAGS);
+	g_hAllow =			CreateConVar("l4d_lootbox_enable",					"1",				"1 = Plugin On. 0 = Plugin Off.", FCVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hGameModes =		CreateConVar("l4d_lootbox_gamemodes",				"",					"Enable plugin in these gamemodes, separated by commas, no spaces.\nEmpty to allow all.", FCVAR_FLAGS);
 
-	g_hBoxLifeTime =	CreateConVar("l4d2_lootbox_lifetime",				"30.0",				"Lifetime of the Loot Boxes in seconds.", FCVAR_FLAGS, true, 10.0, true, 60.0);
-	g_hPosProb =		CreateConVar("l4d2_lootbox_positive_chance",		"50.0",				"Chance in % to have a good Loot Box opening.", FCVAR_FLAGS, true, 0.0, true, 100.0);
-	
-	g_hPosWeight =		CreateConVar("l4d2_lootbox_positive_weights",		POS_WEIGHTS,		"Weight of good Loot Box results.\n17 values, separated by commas, no spaces.\n<T1,T2,Secondary,Drugs,Medical,Throwables,Items,Speed,Invulnerability,Regeneration,Fire,InfiniteAmmo,ExplosiveShots,InfinityGaunlet>", FCVAR_FLAGS);
-	g_hNegRes =			CreateConVar("l4d2_lootbox_negative_weights",		NEG_WEIGHTS,		"Weight of bad Loot Box results.\n17 values, separated by commas, no spaces.\n<Mob,Panic,VomitTrap,Witch,Tank,ToxicCloud,Barrel,BlackAndWhite,FreezeTrap,ReverseControls,Fragility,BearTrap,RandomAngles,FullSITeam>", FCVAR_FLAGS);
+	g_hBoxLifeTime =	CreateConVar("l4d_lootbox_lifetime",				"30.0",				"Lifetime of the Loot Boxes in seconds.", FCVAR_FLAGS, true, 10.0, true, 60.0);
+	g_hPosProb =		CreateConVar("l4d_lootbox_positive_chance",			"50.0",				"Chance in % to have a good Loot Box opening.", FCVAR_FLAGS, true, 0.0, true, 100.0);
 
-	g_hBoostTimes =		CreateConVar("l4d2_lootbox_boost_durations",		BOOST_TIMES,		"Duration of good Box boosts in seconds.\n6 values, separated by commas, no spaces.\n<Speed,Invulnerability,Regeneration,FireDamage,InfiniteAmmo,ExplosiveShots>.", FCVAR_FLAGS);
-	g_hNerfTimes =		CreateConVar("l4d2_lootbox_nerf_durations",			NERF_TIMES,			"Duration of bad Box nerfs in seconds.\n13| values, separated by commmas, no spaces.\n<ReverseControls,Fragility,RandomAngles>\nIf one value is placed, it will be set for all the durations.", FCVAR_FLAGS);
+	g_hBoostTimes =		CreateConVar("l4d_lootbox_boost_durations",			BOOST_TIMES,		"Duration of good Box boosts in seconds.\n6 values, separated by commas, no spaces.\n<Speed,Invulnerability,Regeneration,FireDamage,InfiniteAmmo,ExplosiveShots>.", FCVAR_FLAGS);
+	g_hNerfTimes =		CreateConVar("l4d_lootbox_nerf_durations",			NERF_TIMES,			"Duration of bad Box nerfs in seconds.\n13| values, separated by commmas, no spaces.\n<ReverseControls,Fragility,RandomAngles>\nIf one value is placed, it will be set for all the durations.", FCVAR_FLAGS);
+	if( g_bL4D2 )
+	{
+		g_hPosWeight =		CreateConVar("l4d_lootbox_positive_weights",		POS_WEIGHTS,		"Weight of good Loot Box results.\n17 values, separated by commas, no spaces.\n<T1,T2,T3,Secondary,Drugs,Medical,Throwables,Items,Ammoupgrade,LaserBox,Speed,Invulnerability,Regeneration,Fire,InfiniteAmmo,ExplosiveShots,InfinityGaunlet>", FCVAR_FLAGS);
+		g_hNegRes =			CreateConVar("l4d_lootbox_negative_weights",		NEG_WEIGHTS,		"Weight of bad Loot Box results.\n17 values, separated by commas, no spaces.\n<Mob,Panic,VomitTrap,SpitTrap,Witch,Tank,ToxicCloud,JockeyRide,Barrel,BlackAndWhite,FreezeTrap,ReverseControls,Fragility,BearTrap,RandomAngles,FireWorks,FullSITeam>", FCVAR_FLAGS);
+		g_hSpecialDrops =	CreateConVar("l4d_lootbox_special_drop_chance",		SI_CHANCES,			"Chance to drop a LootBox when a Special infected dies.\n1|6 values, separated by commas, no spaces, values from 0.0 to 100.0\nOrder:<smoker,boomer,hunter,spitter,jockey,charger>\nIf one value is placed, it will be set for all SI.", FCVAR_FLAGS);	
+	}
+	else
+	{
+		g_hPosWeight =		CreateConVar("l4d_lootbox_positive_weights",		POS_WEIGHTS_1,		"Weight of good Loot Box results.\n14 values, separated by commas, no spaces.\n<T1,T2,Secondary,Drugs,Medical,Throwables,Items,Speed,Invulnerability,Regeneration,Fire,InfiniteAmmo,ExplosiveShots,InfinityGaunlet>", FCVAR_FLAGS);
+		g_hNegRes =			CreateConVar("l4d_lootbox_negative_weights",		NEG_WEIGHTS_1,		"Weight of bad Loot Box results.\n14 values, separated by commas, no spaces.\n<Mob,Panic,VomitTrap,Witch,Tank,ToxicCloud,Barrel,BlackAndWhite,FreezeTrap,ReverseControls,Fragility,BearTrap,RandomAngles,FullSITeam>", FCVAR_FLAGS);
+		g_hSpecialDrops =	CreateConVar("l4d_lootbox_special_drop_chance",		SI_CHANCES_1,		"Chance to drop a LootBox when a Special infected dies.\n1|3 values, separated by commas, no spaces, values from 0.0 to 100.0\nOrder:<smoker,boomer,hunter>\nIf one value is placed, it will be set for all SI.", FCVAR_FLAGS);
+	}
+	g_hTankDrops =		CreateConVar("l4d_lootbox_tank_drops",				"1,3",				"Min and max amount of lootboxes dropped when a tank dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
+	g_hWitchDrops =		CreateConVar("l4d_lootbox_witch_drops",				"1,2",				"Min and max amount of lootboxes dropped when a witch dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
 
-	g_hSpecialDrops =	CreateConVar("l4d2_lootbox_special_drop_chance",	SI_CHANCES,			"Chance to drop a LootBox when a Special infected dies.\n1|3 values, separated by commas, no spaces, values from 0.0 to 100.0\nOrder:<smoker,boomer,hunter>\nIf one value is placed, it will be set for all SI.", FCVAR_FLAGS);
-	g_hTankDrops =		CreateConVar("l4d2_lootbox_tank_drops",				"1,3",				"Min and max amount of lootboxes dropped when a tank dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
-	g_hWitchDrops =		CreateConVar("l4d2_lootbox_witch_drops",			"1,2",				"Min and max amount of lootboxes dropped when a witch dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
+	g_hWeaponLock =		CreateConVar("l4d_lootbox_weapon_lock",				"5.0",				"Prevent bots to steal weapons/items this amount of time (0.0 to disable).", FCVAR_FLAGS, true, 0.0, true, 15.0);
+	g_hWeaponLife =		CreateConVar("l4d_lootbox_weapon_lifetime",			"20.0",				"Lifetime of the weapons/items in boxes, in seconds.", FCVAR_FLAGS, true, 15.0, true, 60.0);
 
-	g_hWeaponLock =		CreateConVar("l4d2_lootbox_weapon_lock",			"5.0",				"Prevent bots to steal weapons/items this amount of time (0.0 to disable).", FCVAR_FLAGS, true, 0.0, true, 15.0);
-	g_hWeaponLife =		CreateConVar("l4d2_lootbox_weapon_lifetime",		"20.0",				"Lifetime of the weapons/items in boxes, in seconds.", FCVAR_FLAGS, true, 15.0, true, 60.0);
+	g_hToxCloudLife =	CreateConVar("l4d_lootbox_toxicloud_lifetime",		"40",				"Lifetime of the toxic cloud in seconds.", FCVAR_FLAGS, true, 10.0, true, 240.0);
+	g_hIntoxChance = 	CreateConVar("l4d_lootbox_intoxication_chance",		"15.0",				"Chance for a survivor to get intoxicated when receiving toxic cloud damage.", FCVAR_FLAGS, true, 0.0, true, 100.0);
+	g_hToxicHits =		CreateConVar("l4d_lootbox_toxichits",				"50",				"Amount of toxic hits that an intoxicated survivor will receive after intoxication.", FCVAR_FLAGS, true, 1.0);
+	g_hBleedHits =		CreateConVar("l4d_lootbox_bleedhits",				"30",				"Amount of bleed hits that survivors will get after opening a bear trap.", FCVAR_FLAGS, true, 1.0);
+	g_hFreezeTime =		CreateConVar("l4d_lootbox_freezetime",				"10.0",				"Amount of time in seconds that survivors will be frozen with the freeze trap.", FCVAR_FLAGS, true, 1.0);
+	g_hFragilityMult =	CreateConVar("l4d_lootbox_fragility_multiplier",	"5.0",				"Multiply the damage received by survivor under fragility by this amount.", FCVAR_FLAGS, true, 1.0);
 
-	g_hToxCloudLife =	CreateConVar("l4d2_lootbox_toxicloud_lifetime",		"40",				"Lifetime of the toxic cloud in seconds.", FCVAR_FLAGS, true, 10.0, true, 240.0);
-	g_hIntoxChance = 	CreateConVar("l4d2_lootbox_intoxication_chance",	"15.0",				"Chance for a survivor to get intoxicated when receiving toxic cloud damage.", FCVAR_FLAGS, true, 0.0, true, 100.0);
-	g_hToxicHits =		CreateConVar("l4d2_lootbox_toxichits",				"50",				"Amount of toxic hits that an intoxicated survivor will receive after intoxication.", FCVAR_FLAGS, true, 1.0);
-	g_hBleedHits =		CreateConVar("l4d2_lootbox_bleedhits",				"30",				"Amount of bleed hits that survivors will get after opening a bear trap.", FCVAR_FLAGS, true, 1.0);
-	g_hFreezeTime =		CreateConVar("l4d2_lootbox_freezetime",				"10.0",				"Amount of time in seconds that survivors will be frozen with the freeze trap.", FCVAR_FLAGS, true, 1.0);
-
-	g_hMobSize =		CreateConVar("l4d2_lootbox_mob_size",				"80",				"Size of mob obtained from LootBox.", FCVAR_FLAGS, true, 20.0);
-	g_hMegaMobSize =	CreateConVar("l4d2_lootbox_megamob_size",			"140",				"Size of megamob obtained from LootBox", FCVAR_FLAGS, true, 30.0);
-	g_hCurrGamemode = FindConVar("mp_gamemode");
-
+	g_hMobSize =		CreateConVar("l4d_lootbox_mob_size",				"80",				"Size of mob obtained from LootBox.", FCVAR_FLAGS, true, 20.0);
+	g_hMegaMobSize =	CreateConVar("l4d_lootbox_megamob_size",			"140",				"Size of megamob obtained from LootBox", FCVAR_FLAGS, true, 30.0);
+	g_hCurrGamemode =	FindConVar("mp_gamemode");
 	
 	g_hAllow.AddChangeHook(CvarChange_Enable);
 	g_hGameModes.AddChangeHook(CvarChange_Enable);
@@ -269,6 +350,7 @@ public void OnPluginStart()
 	g_hNerfTimes.AddChangeHook(CVarChange_Times);
 	
 	RegAdminCmd("sm_lootbox_spawn", AdminSpawnBox, ADMFLAG_KICK, "Spawn Lootboxes at your crosshair position.");
+	RegAdminCmd("sm_lootbox_wipe", AdminWipeEnts, ADMFLAG_KICK, "Remove boxes and weapons generated by plugin.");
 	
 	AutoExecConfig(true, "l4d_lootboxes");
 	
@@ -283,31 +365,47 @@ public void OnMapStart()
 {
 	WipeLootBoxes();
 	WipeWeapons();
+	WipeClouds();
 	for( int i = 1; i <= MaxClients; i++ )
 		ResetClientData(i);
 		
 	PrecacheSound(SND_BOOMER_EXPL, false);
-	PrecacheSound(SND_GOOD_OPEN, false);
 	PrecacheSound(SND_BAD_OPEN, false);
-	PrecacheSound(SND_BOOST_START, false);
 	PrecacheSound(SND_REGEN, false);
-	PrecacheSound(SND_FIRE, false);
 	PrecacheSound(SND_BOOST_END, false);
-	PrecacheSound(SND_THANOS, false);
 	PrecacheSound(SND_DENY, false);
-	PrecacheSound(SND_EXPL1, false);
-	PrecacheSound(SND_EXPL2, false);
-	PrecacheSound(SND_EXPL3, false);
-	PrecacheSound(SND_BEARTRAP, false);
+		
+	if( g_bL4D2 )
+	{
+		PrecacheSound(SND_GOOD_OPEN, false);
+		PrecacheSound(SND_BOOST_START, false);
+		PrecacheSound(SND_FIRE, false);
+		PrecacheSound(SND_THANOS, false);
+		PrecacheSound(SND_SHIELD, false);
+		PrecacheSound(SND_BEARTRAP, false);
+		PrecacheSound(SND_EXPL1, false);
+		PrecacheSound(SND_EXPL2, false);
+		PrecacheSound(SND_EXPL3, false);
+	}
+	else
+	{
+		PrecacheSound(SND_GOOD_OPEN_1, false);
+		PrecacheSound(SND_BOOST_START_1, false);
+		PrecacheSound(SND_FIRE_1, false);
+		PrecacheSound(SND_THANOS_1, false);
+		PrecacheSound(SND_SHIELD_1, false);
+		PrecacheSound(SND_BEARTRAP_1, false);
+	}
 	
 	PrecacheModel(MODEL_BARREL, true);
 	PrecacheModel(MODEL_BARRELA, true);
 	PrecacheModel(MODEL_BARRELB, true);
 	PrecacheModel(MODEL_BOX, true);
+	PrecacheModel(MODEL_FIREWORK, true);
 	PrecacheModel(MODEL_GASCAN, true);
 	PrecacheModel(MODEL_PROPANETANK, true);
 	PrecacheModel(MODEL_OXYGENTANK, true);
-	
+
 	PrecacheParticle(PARTICLE_BOOMER);
 	PrecacheParticle(PARTICLE_EMBERS);
 	PrecacheParticle(PARTICLE_FIRE);
@@ -346,22 +444,25 @@ public void OnMapEnd()
 {
 	WipeLootBoxes();
 	WipeWeapons();
+	WipeClouds();
 }
 
 public void OnPluginEnd()
 {
 	WipeLootBoxes();
 	WipeWeapons();
+	WipeClouds();
 	for( int i = 1; i <= MaxClients; i++ )
 	{
-		if( g_iPlayerParticle[i] && IsValidEntity(g_iPlayerParticle[i]) )
-			RemoveEntity(g_iPlayerParticle[i]);
+		int entity = EntRefToEntIndex(g_iPlayerParticle[i]);
+		if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+			RemoveEntity(entity);
 	}
 }
 
-/*******************************************************************************************
- **									ConVars
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                       ConVars                                             *
+ * ========================================================================================= */
 
 public void CvarChange_Enable(Handle conVar, const char[] oldValue, const char[] newValue)
 {
@@ -423,10 +524,14 @@ void SwitchPlugin()
 		HookEvent("round_start",			Event_Round_Start,		EventHookMode_PostNoCopy);
 		HookEvent("round_end",				Event_Round_End,		EventHookMode_PostNoCopy);
 		HookEvent("player_death",			Event_Player_Death);
-		HookEvent("weapon_fire",			Event_Weapon_Fire);
 		HookEvent("infected_hurt",			Event_Infected_Hurt);
 		HookEvent("player_hurt",			Event_Player_Hurt);
 		HookEvent("bullet_impact",			Event_Bullet_Impact);
+		if( g_bL4D2 )
+			HookEvent("weapon_fire",		Event_Weapon_Fire);
+		else
+			HookEvent("weapon_fire",		Event_Weapon_Fire_1);
+
 	}
 	
 	if( g_bPluginOn == true && (g_hAllow.BoolValue == false || g_bAllowedGamemode == false) )
@@ -435,13 +540,17 @@ void SwitchPlugin()
 		UnhookEvent("round_start",				Event_Round_Start);
 		UnhookEvent("round_end",				Event_Round_End);
 		UnhookEvent("player_death",				Event_Player_Death);
-		UnhookEvent("weapon_fire",				Event_Weapon_Fire);
 		UnhookEvent("infected_hurt",			Event_Infected_Hurt);
 		UnhookEvent("player_hurt",				Event_Player_Hurt);
 		UnhookEvent("bullet_impact",			Event_Bullet_Impact);
+		if( g_bL4D2 )
+			UnhookEvent("weapon_fire",			Event_Weapon_Fire);
+		else
+			UnhookEvent("weapon_fire",			Event_Weapon_Fire_1);
 		
 		WipeLootBoxes();
 		WipeWeapons();
+		WipeClouds();
 		for( int i = 1; i <= MaxClients; i++ )
 			ResetClientData(i);
 	}
@@ -450,7 +559,7 @@ void SwitchPlugin()
 void GetProbs()
 {
 	char sConVar[256];
-	char sBuffer[24][8];
+	char sBuffer[20][8];
 	g_iPosWeightSum = 0;
 	g_iNegWeightSum = 0;
 	int iArrSize;
@@ -493,16 +602,17 @@ void GetDrops()
 	char sConVar[128];
 	char sBuffer[8][8];
 	int iArrSize;
+	int iSpecials = g_bL4D2 ? 6 : 3;
 	
 	g_hSpecialDrops.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 6 && iArrSize != 1 )
+	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iSpecials && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_special_drop_chance> value amount. Expected %d|1, found %d", NEG_SIZE, iArrSize);
+		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_special_drop_chance> value amount. Expected %d|1, found %d", iSpecials, iArrSize);
 		ExplodeString(SI_CHANCES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hSpecialDrops.RestoreDefault(false, false);
 	}
 			
-	for( int i = 0; i <= 6; i++ )
+	for( int i = 0; i < iSpecials; i++ )
 	{
 		g_fSpecialDrops[i] = iArrSize == 1 ? g_hSpecialDrops.FloatValue : StringToFloat(sBuffer[i]);			
 		if( g_fSpecialDrops[i] < 0.0 )
@@ -514,7 +624,7 @@ void GetDrops()
 	g_hTankDrops.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 2 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_special_drop_chance> value amount. Expected 2|1, found %d", iArrSize);
+		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_tank_drops> value amount. Expected 2|1, found %d", iArrSize);
 		g_iTankDrops = { 1, 3 };
 		g_hTankDrops.RestoreDefault(false, false);	
 	}
@@ -537,7 +647,7 @@ void GetDrops()
 	g_hWitchDrops.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 2 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_special_drop_chance> value amount. Expected 2|1, found %d", iArrSize);
+		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_witch_drops> value amount. Expected 2|1, found %d", iArrSize);
 		g_iWitchDrops = { 1, 2 };
 		g_hWitchDrops.RestoreDefault(false, false);	
 	}
@@ -578,21 +688,21 @@ void GetBoostTimes()
 			g_fBoostTimes[i] = 0.1;
 	}
 	g_hNerfTimes.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 2 && iArrSize != 1 )
+	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 3 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 3|1, found %d", iArrSize);
+		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 2|1, found %d", iArrSize);
 		ExplodeString(NERF_TIMES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hNerfTimes.RestoreDefault(false, false);
 	}
 	g_fNerfTimes[0] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[0]);
 	g_fNerfTimes[1] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[1]);
 	g_fNerfTimes[2] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[2]);
-	
 }
-/*******************************************************************************************
- **								Events, SDKHooks & Left4DHooks
- *******************************************************************************************/
- 
+
+/* ========================================================================================= *
+ *                             Events, SDKHooks, Left4DHooks                                 *
+ * ========================================================================================= */ 
+
 public Action Event_Round_Start(Event event, const char[] name, bool dontBroadcast)
 {
 	for( int i = 1; i <= MaxClients; i++ )
@@ -600,12 +710,14 @@ public Action Event_Round_Start(Event event, const char[] name, bool dontBroadca
 
 	WipeLootBoxes();
 	WipeWeapons();
+	WipeClouds();
 }
 
 public Action Event_Round_End(Event event, const char[] name, bool dontBroadcast)
 {
 	WipeLootBoxes();
 	WipeWeapons();
+	WipeClouds();
 }
 
 public Action Event_Player_Death(Event event, const char[] name, bool dontBroadcast)
@@ -633,16 +745,15 @@ public Action Event_Player_Death(Event event, const char[] name, bool dontBroadc
 		GetClientAbsOrigin(client, vPos);
 		vPos[2] += 16.0;
 		int iClass = GetEntProp(client, Prop_Send, "m_zombieClass");
-		if( iClass != ZC_TANK )
+		if( (g_bL4D2 && iClass != ZC_TANK) || iClass != ZC_TANK_1 )
 		{
 			float fRand = GetRandomFloat(0.0, 100.0);
+			// Array range: 0-5, infected range 1-6.
 			if( fRand <= g_fSpecialDrops[iClass - 1] )
 				RandomLootBoxSpawn(vPos, 1, 1);
 		}
 		else
-		{
 			RandomLootBoxSpawn(vPos, g_iTankDrops[0], g_iTankDrops[1]);
-		}
 	}
 	return Plugin_Continue;
 }
@@ -650,11 +761,12 @@ public Action Event_Player_Death(Event event, const char[] name, bool dontBroadc
 public Action Event_Weapon_Fire(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if( g_iPlayerBoosts[client] != PB_IAMMO )
+	if( g_iPlayerBoosts[client] & PB_IAMMO == 0 )
 		return Plugin_Continue;
 		
 	int iClip, iSlot = -1;
 	char sWeapon[32];
+	event.GetString("weapon", sWeapon, sizeof(sWeapon));
 	if( StrEqual(sWeapon, "pistol", false) )
 	{
 		iSlot = 1;
@@ -663,62 +775,105 @@ public Action Event_Weapon_Fire(Event event, const char[] name, bool dontBroadca
 		else
 			iClip = 15;
 	}
-	else if( StrEqual(sWeapon, "pistol_magnum", false) )
+	else if( strncmp(sWeapon[7], "magnum", 6) == 0 ) // pistol_magnum
 	{
 		iSlot = 1;
 		iClip = 8;
 	}
-	else if( StrContains(sWeapon, "smg", false) || StrEqual(sWeapon, "rifle", false) || StrEqual(sWeapon, "rifle_sg552", false) )
-	{
-		iSlot = 0;
-		iClip = 50;
-	}
-	else if( StrEqual(sWeapon, "rifle_ak47", false) )
+	else if( strncmp(sWeapon[6], "ak", 2) == 0) //rifle_ak47
 	{
 		iSlot = 0;
 		iClip = 40;
 	}
-	else if( StrEqual(sWeapon, "rifle_desert", false) )
+	else if( strncmp(sWeapon[6], "des", 3) == 0 ) // rifle_desert
 	{
 		iSlot = 0;
 		iClip = 60;
 	}
-	else if( StrEqual(sWeapon, "rifle_m60", false) )
+	else if( strncmp(sWeapon[6], "m60", 3) == 0 ) // rifle_m60
 	{
 		iSlot = 0;
 		iClip = 150;
 	}
-	else if( StrEqual(sWeapon, "grenade_launcher", false) )
+	else if( strncmp(sWeapon, "gre", 3) == 0 ) // grenade_launcher
 	{
 		iSlot = 0;
 		iClip = 1;
 	}
-	else if( StrEqual(sWeapon, "pumpshotgun", false) || StrEqual (sWeapon, "shotgun_chrome", false) )
+	else if( strncmp(sWeapon, "pump", 4) || strncmp(sWeapon[8], "chro", 4) == 0 ) // pumpshotgun, shotgun_chrome
 	{
 		iSlot = 0;
 		iClip = 8;
 	}
-	else if( StrEqual(sWeapon, "autoshotgun", false) || StrEqual (sWeapon, "shotgun_spas", false) )
+	else if( strncmp(sWeapon, "auto", 4) || strncmp(sWeapon[8], "spas", 4) == 0 ) // autoshotgun, shotgun_spas
 	{
 		iSlot = 0;
 		iClip = 10;
 	}
-	else if( StrEqual(sWeapon, "hunting_rifle", false) || StrEqual (sWeapon, "sniper_scout", false) )
+	else if( strncmp(sWeapon, "hunt", 4) == 0 || strncmp(sWeapon[7], "scout", 5) == 0 ) // hunting_rifle, sniper_scout
 	{
 		iSlot = 0;
 		iClip = 15;
 	}
-	else if( StrEqual(sWeapon, "sniper_military", false) )
+	else if( strncmp(sWeapon[7], "mili", 4) == 0 ) // sniper_military
 	{
 		iSlot = 0;
 		iClip = 30;
 	}
-	else if( StrEqual(sWeapon, "sniper_awp", false) )
+	else if( strncmp(sWeapon, "awp", 3) == 0 ) // sniper_awp
 	{
 		iSlot = 0;
 		iClip = 20;
 	}
-	if( iSlot == 0 || iSlot == 1 )
+	else if( strncmp(sWeapon, "rifle", 5) == 0 || strncmp(sWeapon, "smg", 3) == 0 ) // rifle, rifle_sg552, smg, smg_silenced, smg_mp5
+	{
+		iSlot = 0;
+		iClip = 50;
+	}
+	else return Plugin_Continue;
+	
+	if( iSlot != -1 )
+	{
+		int iWeapon = GetPlayerWeaponSlot(client, iSlot);
+		if( IsValidEntity(iWeapon) )
+			SetEntProp(iWeapon, Prop_Send, "m_iClip1", iClip + 1);
+	}
+	return Plugin_Continue;
+}
+
+public Action Event_Weapon_Fire_1(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if( g_iPlayerBoosts[client] & PB_IAMMO == 0 )
+		return Plugin_Continue;
+		
+	int iClip, iSlot = -1;
+	char sWeapon[32];
+	event.GetString("weapon", sWeapon, sizeof(sWeapon));
+	if( StrEqual(sWeapon, "pistol", false) )
+	{
+		iSlot = 1;
+		if( GetEntProp(GetPlayerWeaponSlot(client, 1), Prop_Send, "m_isDualWielding") > 0 )
+			iClip = 30;
+		else
+			iClip = 15;
+	}
+	else if( strncmp(sWeapon, "pump", 4) == 0 ) // pumpshotgun, shotgun_chrome
+	{
+		iSlot = 0;
+		iClip = 8;
+	}
+	else if( strncmp(sWeapon, "auto", 4) == 0 ) // autoshotgun, shotgun_spas
+	{
+		iSlot = 0;
+		iClip = 10;
+	}
+	else if( strncmp(sWeapon, "rifle", 5) == 0 ) // rifle
+	{
+		iSlot = 0;
+		iClip = 10;
+	}
+	if( iSlot != -1 )
 	{
 		int iWeapon = GetPlayerWeaponSlot(client, iSlot);
 		if( IsValidEntity(iWeapon) )
@@ -834,7 +989,7 @@ public Action Fragility_Callback(int victim, int& attacker, int& inflictor, floa
 			return Plugin_Continue;
 	}
 	
-	damage *= 5.0;
+	damage *= g_hFragilityMult.FloatValue;
 	return Plugin_Changed;
 }
 
@@ -878,7 +1033,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		}
 		vel[0] = -vel[0];
 		vel[1] = -vel[1];
-		vel[2] = -vel[2];
+//		vel[2] = -vel[2];
 		return Plugin_Changed;
 	}
 	return Plugin_Continue;
@@ -898,21 +1053,16 @@ public Action L4D_OnSpawnMob(int &amount)
 	return Plugin_Continue;
 }
 
-/*******************************************************************************************
- **									Admin commands
- *******************************************************************************************/
-
+/* ========================================================================================= *
+ *                                       Admin Commands                                      *
+ * ========================================================================================= */
+ 
 public Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes at player position DISABLED
 {
 	if( !g_bPluginOn ) return Plugin_Handled;
 	if( !client )
 	{
 		ReplyToCommand(client, "[LB] Commands can be only used in game.");
-		return Plugin_Handled;
-	}
-	if( args != 1 )
-	{
-		ReplyToCommand(client, "%s Invalid number of arguments, use: sm_lootbox_spawn <amount>", CHAT_TAG);
 		return Plugin_Handled;
 	}
 	
@@ -925,8 +1075,12 @@ public Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes 
 	vPos[2] += 8.0;
 	int iCount;
 	char sArgs[8];
-	GetCmdArg(1, sArgs, sizeof(sArgs));
-	iCount = StringToInt(sArgs);
+	if( args > 0 )
+	{
+		GetCmdArg(1, sArgs, sizeof(sArgs));
+		iCount = StringToInt(sArgs);
+	}
+	else iCount = 1;
 	for( int i = 0; i < iCount; i++ )
 	{
 		if( !SpawnLootBox(vPos, vAng, NULL_VECTOR) )
@@ -938,67 +1092,85 @@ public Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes 
 	return Plugin_Handled;
 }
 
-/*******************************************************************************************
- **								Timers & Frames
- *******************************************************************************************/
-
-public Action BoxLife_Timer(Handle timer, int arrIndex)
+// This one can be called via server console, because it doesn't require player angles or position
+public Action AdminWipeEnts(int client, int args)
 {
-	g_hLootBoxTimer[arrIndex] = null;
-	if( IsValidEntity(g_iLootBoxEnt[arrIndex]) )
-		RemoveEntity(g_iLootBoxEnt[arrIndex]);
-
-	g_iLootBoxEnt[arrIndex] = 0;
+	if( !g_bPluginOn ) return Plugin_Handled;
+	
+	WipeLootBoxes();
+	WipeWeapons();
+	return Plugin_Handled;
 }
 
-public Action PlayerSpeed_Timer(Handle timer, int client)
+/* ========================================================================================= *
+ *                                 Timers and Frames                                         *
+ * ========================================================================================= */
+ 
+Action BoxLife_Timer(Handle timer, int arrIndex)
+{
+	g_hLootBoxTimer[arrIndex] = null;
+	int entity = EntRefToEntIndex(g_iLootBoxEnt[arrIndex]);
+	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+		RemoveEntity(entity);
+
+	g_iLootBoxEnt[arrIndex] = 0;
+	return Plugin_Continue;
+}
+
+Action PlayerSpeed_Timer(Handle timer, int client)
 {
 	if( !IsClientInGame(client) || !IsPlayerAlive(client) )
-		return;
+		return Plugin_Continue;
 		
 	g_hPlayerSpeedTimer[client] = null;
 	DefaultPlayerSpeed(client);
 	g_iPlayerBoosts[client] &= ~PB_SPEED;
 	EmitSoundToClient(client, SND_BOOST_END);
-	if( g_iPlayerParticle[client] && IsValidEntity(g_iPlayerParticle[client]) )
-		RemoveEntity(g_iPlayerParticle[client]);
+	int entity = EntRefToEntIndex(g_iPlayerParticle[client]);
+	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+		RemoveEntity(entity);
 		
 	PrintToChat(client, "%s \x03Speed boost\x01 ended.", CHAT_TAG);
+	return Plugin_Continue;
 }
 
-public Action PlayerInvul_Timer(Handle timer, int client)
+Action PlayerInvul_Timer(Handle timer, int client)
 {
 	g_hPlayerInvulTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PB_INVUL;
 	SDKUnhook(client, SDKHook_OnTakeDamage, Invulnerability_Callback);
 	EmitSoundToClient(client, SND_BOOST_END);
 	PrintToChat(client, "%s \x03Invulnerability\x01 ended.", CHAT_TAG);
+	return Plugin_Continue;
 }
 
-public Action PlayerFire_Timer(Handle timer, int client)
+Action PlayerFire_Timer(Handle timer, int client)
 {
 	g_hPlayerFireTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PB_FIRE;
 	StopSound(client, SNDCHAN_AUTO, SND_FIRE);
 	EmitSoundToClient(client, SND_BOOST_END);
-	if( g_iPlayerParticle[client] && IsValidEntity(g_iPlayerParticle[client]) )
-		RemoveEntity(g_iPlayerParticle[client]);
+	int entity = EntRefToEntIndex(g_iPlayerParticle[client]);
+	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+		RemoveEntity(entity);
 		
 	PrintToChat(client, "%s \x03Invulnerability\x01 ended.", CHAT_TAG);
+	return Plugin_Continue;
 }
 
-public Action PlayerInfAmmo_Timer(Handle timer, int client)
+Action PlayerInfAmmo_Timer(Handle timer, int client)
 {
 	g_hPlayerAmmoTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PB_IAMMO;
+	return Plugin_Continue;
 }
 
-public Action PlayerRegen_Timer(Handle timer, int client)
+Action PlayerRegen_Timer(Handle timer, int client)
 {
 	g_hPlayerRegenTimer[client] = null;
 	
 	if( !IsClientInGame(client) || !IsPlayerAlive(client) )
-		return;
+		return Plugin_Continue;
 		
 	if( GetClientHealth(client) < 98 )
 	{
@@ -1011,8 +1183,7 @@ public Action PlayerRegen_Timer(Handle timer, int client)
 		
 	if( GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1 )
 	{
-		SetVariantString("self.ReviveFromIncap()");	// VScripts function to revive an incap player
-		AcceptEntityInput(client, "RunScriptCode");	// Run VScript function
+		L4D_ReviveSurvivor(client);
 	}
 	if( --g_iPlayerRegenToken[client] > 0 )
 		g_hPlayerRegenTimer[client] = CreateTimer(0.5, PlayerRegen_Timer, client);
@@ -1022,48 +1193,57 @@ public Action PlayerRegen_Timer(Handle timer, int client)
 		StopSound(client, SNDCHAN_AUTO, SND_REGEN);
 		EmitSoundToClient(client, SND_BOOST_END);
 		g_iPlayerBoosts[client] &= ~PB_REGEN;
-		if( g_iPlayerParticle[client] && IsValidEntity(g_iPlayerParticle[client]) )
-			RemoveEntity(g_iPlayerParticle[client]);	
+		int entity = EntRefToEntIndex(g_iPlayerParticle[client]);
+		if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+			RemoveEntity(entity);
 	}
+	return Plugin_Continue;
 }
 
-public Action WeaponUnlock_Timer(Handle timer, int arrPos)
+Action WeaponUnlock_Timer(Handle timer, int arrPos)
 {
 	g_hWeaponUnlockTimer[arrPos] = null;
-	if( IsValidEntity(g_iWeaponEnt[arrPos]) )
-		SDKUnhook(g_iWeaponEnt[arrPos], SDKHook_Use, Weapon_Used);
+	int entity = EntRefToEntIndex(g_iWeaponEnt[arrPos]);
+	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+		SDKUnhook(entity, SDKHook_Use, Weapon_Used);
+		
+	return Plugin_Continue;
 }
 
-public Action WeaponDelete_Timer(Handle timer, int arrPos)
+Action WeaponDelete_Timer(Handle timer, int arrPos)
 {
 	g_hWeaponDeleteTimer[arrPos] = null;
-	if( g_iWeaponEnt[arrPos] && IsValidEntity(g_iWeaponEnt[arrPos]) )
+	int entity = EntRefToEntIndex(g_iWeaponEnt[arrPos]);
+	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
 	{
-		RemoveEntity(g_iWeaponEnt[arrPos]);
+		RemoveEntity(entity);
 		delete g_hWeaponUnlockTimer[arrPos];
 	}
 
 	g_iWeaponEnt[arrPos] = 0;
+	return Plugin_Continue;
 }
 
 
-public Action RemoveBot_Timer(Handle timer, int clientSerial)
+Action RemoveBot_Timer(Handle timer, int clientSerial)
 {
 	int client = GetClientFromSerial(clientSerial);
 	if( client == 0 || !IsClientInGame(client) )
-		return;
+		return Plugin_Continue;
 		
 	KickClient(client);
+	return Plugin_Continue;
 }
 
-public Action ToxicCloud_Timer(Handle timer, int arrPos)
+Action ToxicCloud_Timer(Handle timer, int arrPos)
 {
 	g_hToxCloudTimer[arrPos] = null;
-	if( !IsValidEntity(g_iToxCloudEnt[arrPos]) )
-		return;
+	int entity = g_iToxCloudEnt[arrPos];
+	if( entity == INVALID_ENT_REFERENCE )
+		return Plugin_Continue;
 		
 	float vPos[3];
-	GetEntPropVector(g_iToxCloudEnt[arrPos], Prop_Send, "m_vecOrigin", vPos);
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vPos);
 	vPos[2] +=144;
 	
 	for( int i = 1; i <= MaxClients; i++ )
@@ -1088,43 +1268,52 @@ public Action ToxicCloud_Timer(Handle timer, int arrPos)
 	if( --g_iToxCloudCounter[arrPos] > 0 )
 		g_hToxCloudTimer[arrPos] = CreateTimer(2.0, ToxicCloud_Timer, arrPos);
 	else
-		RemoveEntity(g_iToxCloudEnt[arrPos]);
+	{
+		if( entity != 0 ) // Because 0 is the server, and killing the server... crashes
+			RemoveEntity(entity);
+		g_iToxCloudEnt[arrPos] = 0;
+	}
+		
+	return Plugin_Continue;
 }
 
-public Action PlayerReverse_Timer(Handle timer, int client)
+Action PlayerReverse_Timer(Handle timer, int client)
 {
 	g_hPlayerReverseTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PN_REVERSE;
 	if( !IsClientInGame(client) || !IsPlayerAlive(client) )
-		return;
+		return Plugin_Continue;
 		
 	PrintToChat(client, "%s \x03Reversed controls\x01 effect has ended.", CHAT_TAG);
 	EmitSoundToClient(client, SND_BOOST_END);
+	return Plugin_Continue;
 }
 
-public Action PlayerExpl_Timer(Handle timer, int client)
+Action PlayerExpl_Timer(Handle timer, int client)
 {
 	g_hPlayerExplTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PB_EXPL;
 	if( !IsClientInGame(client) || !IsPlayerAlive(client) )
-		return;
+		return Plugin_Continue;
 		
 	PrintToChat(client, "%s \x03Explosive shots\x01 effect has ended.", CHAT_TAG);
 	EmitSoundToClient(client, SND_BOOST_END);
+	return Plugin_Continue;
 }
 
-public Action PlayerFragile_Timer(Handle timer, int client)
+Action PlayerFragile_Timer(Handle timer, int client)
 {
 	g_hPlayerFragileTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PN_FRAGILE;
 	if( !IsClientInGame(client) || !IsPlayerAlive(client) )
-		return;
+		return Plugin_Continue;
 		
 	PrintToChat(client, "%s \x03Fragility\x01 ended.", CHAT_TAG);
 	EmitSoundToClient(client, SND_BOOST_END);
+	return Plugin_Continue;
 }
 
-public Action PlayerAngles_Timer(Handle timer, int client)
+Action PlayerAngles_Timer(Handle timer, int client)
 {
 	g_hPlayerAnglesTimer[client] = null;
 	if( g_iPlayerBoosts[client] & PN_ANGLES )
@@ -1155,26 +1344,31 @@ public Action PlayerAngles_Timer(Handle timer, int client)
 		PrintToChat(client, "%s \x03Random orientation\x01 ended.", CHAT_TAG);
 		EmitSoundToClient(client, SND_BOOST_END);
 	}
+	return Plugin_Continue;
 }
 
-public Action EnableExpl_Timer(Handle timer, int client)
+Action EnableExpl_Timer(Handle timer, int client)
 {
 	g_bPlayerExpl[client] = false;
+	return Plugin_Continue;
 }
 
-public void WeaponSpawn_Frame(int arrPos)
+/* Its needed to wait a frame to spawn a weapon to prevent errors
+ * if the weapon is spawned in the same frame the player is opening a box
+ * the weapon will be picked up instantly
+ */
+void WeaponSpawn_Frame(int arrPos)
 {
-	if( !IsValidEntity(g_iWeaponEnt[arrPos]) )
+	int entity = EntRefToEntIndex(g_iWeaponEnt[arrPos]);
+	if( entity == INVALID_ENT_REFERENCE )
 		return;
 		
-	DispatchSpawn(g_iWeaponEnt[arrPos]);
-	SDKHook(g_iWeaponEnt[arrPos], SDKHook_Use, Weapon_Used);
+	DispatchSpawn(entity);
 }
 
-
-/*******************************************************************************************
- **								Lootbox spawn and delete
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                Loot Box spawn & delete                                    *
+ * ========================================================================================= */
 
 int WipeLootBoxes()
 {
@@ -1199,12 +1393,27 @@ void WipeWeapons()
 {
 	for( int i = 0; i < MAX_WEAPONS; i++ )
 	{
-		if( g_iWeaponEnt[i] && IsValidEntity(g_iWeaponEnt[i]) )
-			RemoveEntity(g_iWeaponEnt[i]);
-
+		int entity = EntRefToEntIndex(g_iWeaponEnt[i]);
+		if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+			RemoveEntity(entity);
+			
+		// Force delete timers and reset variable just in case
 		delete g_hWeaponDeleteTimer[i];
 		delete g_hWeaponUnlockTimer[i];
 		g_iWeaponEnt[i] = 0;
+	}
+}
+
+void WipeClouds()
+{
+	for( int i = 0; i < MAX_TOXCLOUD; i++ )
+	{
+		int entity = EntRefToEntIndex(g_iToxCloudEnt[i]);
+		if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+			RemoveEntity(entity);
+			
+		delete g_hToxCloudTimer[i];
+		g_iToxCloudEnt[i] = 0;
 	}
 }
 
@@ -1249,7 +1458,7 @@ bool SpawnLootBox(float origin[3], float angles[3], float force[3])
 		g_hLootBoxTimer[index] = CreateTimer(g_hBoxLifeTime.FloatValue, BoxLife_Timer, index); // Parse the array index
 
 		DispatchKeyValue(entity, "model", MODEL_BOX);
-		DispatchKeyValue(entity, "targetname", TN_BOX);
+//		DispatchKeyValue(entity, "targetname", TN_BOX);		// Not used really
 		DispatchKeyValue(entity, "spawnflags", "8448");		// "Don`t take physics damage" + "Generate output on +USE" + "Force Server Side"
 		DispatchKeyValue(entity, "glowstate", "3");
 		DispatchKeyValue(entity, "glowcolor", "195 195 0");
@@ -1313,9 +1522,9 @@ public Action Weapon_Used(int entity, int caller, int activator, UseType type, f
 	return Plugin_Continue;
 }
 
-/*******************************************************************************************
- **										LootBox open
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                       Loot Box open                                       *
+ * ========================================================================================= */
 
 void OpenLootBox(int box, int client, float chance)
 {
@@ -1345,8 +1554,8 @@ bool OpenPos(float[3] vPos, int client)
 	int choice;
 	int abs = 0;
 	int iRnd = GetRandomInt(0, g_iPosWeightSum);
-	
-	for( int i = 0; i < POS_SIZE; i++ )
+
+	for( int i = 0; i < (g_bL4D2 ? POS_SIZE : POS_SIZE_1); i++ )
 	{
 		abs += g_iPosWeights[i];
 		if( abs >= iRnd )
@@ -1355,23 +1564,49 @@ bool OpenPos(float[3] vPos, int client)
 			break;
 		}
 	}
-
-	switch( choice )
+	if( g_bL4D2 )
 	{
-		case POS_T1: return SPawnT1(client, vPos);
-		case POS_T2: return SpawnT2(client, vPos);
-		case POS_DRUGS: return SpawnDrugs(client, vPos);
-		case POS_MEDS: return SpawnMeds(client, vPos);
-		case POS_SECNDARY: return SpawnSecondary(client, vPos);
-		case POS_THROW: return SpawnThrowable(client, vPos);
-		case POS_ITEM: return SpawnItem(client, vPos);
-		case POS_SPEED: GivePlayerSpeed(client);
-		case POS_INVUL: GivePlayerInvulnerability(client);
-		case POS_REGEN: GivePlayerRegen(client);
-		case POS_FIRE: GivePlayerFire(client);
-		case POS_IAMMO: GivePlayerInfAmmo(client);
-		case POS_EXPL: GivePlayerExplosive(client);
-		case POS_THANOS: WipeHalfZombies(client);
+		switch( choice )
+		{
+			case POS_T1: return SPawnT1(client, vPos);
+			case POS_T2: return SpawnT2(client, vPos);
+			case POS_T3: return SpawnT3(client, vPos);
+			case POS_DRUGS: return SpawnDrugs(client, vPos);
+			case POS_MEDS: return SpawnMeds(client, vPos);
+			case POS_SECNDARY: return SpawnSecondary(client, vPos);
+			case POS_THROW: return SpawnThrowable(client, vPos);
+			case POS_ITEM: return SpawnItem(client, vPos);
+			case POS_UPGRADE: return SpawnUpgrade(client, vPos);
+			case POS_LASER: return SpawnLaser(client, vPos);
+			case POS_SPEED: GivePlayerSpeed(client);
+			case POS_INVUL: GivePlayerInvulnerability(client);
+			case POS_REGEN: GivePlayerRegen(client);
+			case POS_FIRE: GivePlayerFire(client);
+			case POS_IAMMO: GivePlayerInfAmmo(client);
+			case POS_EXPL: GivePlayerExplosive(client);
+			case POS_THANOS: WipeHalfZombies(client);
+		}
+	}
+	else
+	{
+		switch( choice )
+		{
+			case POS_T1_1: return SPawnT1(client, vPos);
+			case POS_T2_1: return SpawnT2(client, vPos);
+			case POS_DRUGS_1: return SpawnDrugs(client, vPos);
+			case POS_MEDS_1: return SpawnMeds(client, vPos);
+			case POS_SECNDARY_1: return SpawnSecondary(client, vPos);
+			case POS_THROW_1: return SpawnThrowable(client, vPos);
+			case POS_ITEM_1: return SpawnItem(client, vPos);
+			case POS_SPEED_1: GivePlayerSpeed(client);
+			case POS_INVUL_1: GivePlayerInvulnerability(client);
+			case POS_REGEN_1: GivePlayerRegen(client);
+			case POS_FIRE_1: GivePlayerFire(client);
+			case POS_IAMMO_1: GivePlayerInfAmmo(client);
+			case POS_EXPL_1: GivePlayerExplosive(client);
+			case POS_THANOS_1: WipeHalfZombies(client);
+
+		}
 	}
 	return true;
 }
@@ -1382,7 +1617,7 @@ bool OpenNeg(float[3] vPos, int client)
 	int abs = 0;
 	int iRnd = GetRandomInt(0, g_iNegWeightSum);
 	
-	for( int i = 0; i < NEG_SIZE; i++ )
+	for( int i = 0; i < (g_bL4D2 ? NEG_SIZE : NEG_SIZE_1); i++ )
 	{
 		abs += g_iNegWeights[i];
 		if( abs >= iRnd )
@@ -1391,31 +1626,58 @@ bool OpenNeg(float[3] vPos, int client)
 			break;
 		}
 	}
-	
-	switch( choice )
+	if( g_bL4D2 )
 	{
-		case NEG_MOB: SpawnMob(client, false);
-		case NEG_PANIC: SpawnMob(client, true);
-		case NEG_VOMIT: BoxTrap(client, vPos, true);
-		case NEG_WITCH: return SpawnWitch(client, vPos);
-		case NEG_TANK: return SpawnTank(client, vPos);
-		case NEG_TOXIC: return ToxicCloud(client, vPos);
-		case NEG_BARREL: return SpawnExplBarrel(client, vPos);
-		case NEG_BLACKWHITE: BlackWhite(client);
-		case NEG_FROZEN: BoxTrap(client, vPos, false);
-		case NEG_REVERSE: ReverseControls(client);
-		case NEG_FRAGILE: GiveFragility(client);
-		case NEG_BEARTRAP: BearTrap(client, vPos);
-		case NEG_ANGLES: RandomAngles(client);
-		case NEG_FULLSI: return SpawnFullTeam(client);
+		switch( choice )
+		{
+			case NEG_MOB: SpawnMob(client, false);
+			case NEG_PANIC: SpawnMob(client, true);
+			case NEG_VOMIT: BoxTrap(client, vPos, true);
+			case NEG_SPIT: SpitTrap(client, vPos);
+			case NEG_WITCH: return SpawnWitch(client, vPos);
+			case NEG_TANK: return SpawnTank(client, vPos);
+			case NEG_TOXIC: return ToxicCloud(client, vPos);
+			case NEG_JOCKEY: return JockeyRide(client);
+			case NEG_BARREL: return SpawnExplBarrel(client, vPos);
+			case NEG_BLACKWHITE: BlackWhite(client);
+			case NEG_FROZEN: BoxTrap(client, vPos, false);
+			case NEG_REVERSE: ReverseControls(client);
+			case NEG_FRAGILE: GiveFragility(client);
+			case NEG_BEARTRAP: BearTrap(client, vPos);
+			case NEG_ANGLES: RandomAngles(client);
+			case NEG_FIREWORK: return SpawnFireworks(client, vPos);
+			case NEG_FULLSI: return SpawnFullTeam(client);
+		}
+	}
+	else
+	{
+		switch( choice )
+		{
+			case NEG_MOB_1: SpawnMob(client, false);
+			case NEG_PANIC_1: SpawnMob(client, true);
+			case NEG_VOMIT_1: BoxTrap(client, vPos, true);
+			case NEG_WITCH_1: return SpawnWitch(client, vPos);
+			case NEG_TANK_1: return SpawnTank(client, vPos);
+			case NEG_TOXIC_1: return ToxicCloud(client, vPos);
+			case NEG_BARREL_1: return SpawnExplBarrel(client, vPos);
+			case NEG_BLACKWHITE_1: BlackWhite(client);
+			case NEG_FROZEN_1: BoxTrap(client, vPos, false);
+			case NEG_REVERSE_1: ReverseControls(client);
+			case NEG_FRAGILE_1: GiveFragility(client);
+			case NEG_BEARTRAP_1: BearTrap(client, vPos);
+			case NEG_ANGLES_1: RandomAngles(client);
+			case NEG_FULLSI_1: return SpawnFullTeam(client);
+		}
+
 	}
 	return true;
 }
 
-/*******************************************************************************************
- **	                                   RayTracing
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                        RayTracing                                         *
+ * ========================================================================================= */
 
+// Check if a RayTrace 
 bool IsValidImpact(float vSource[3], float vTarget[3])
 {
 	Handle hTrace = TR_TraceRayFilterEx(vSource, vTarget, MASK_SHOT, RayType_EndPoint, _TraceFilter);
@@ -1491,16 +1753,19 @@ bool FoundObstacle(const float vPos[3])
 bool _TraceFilter(int entity, int contentsMask)
 {
 	if( !entity ) return true;
-	return( entity > MaxClients );
+	return entity > MaxClients;
 }
 
-/*******************************************************************************************
- **                                 Good LootBox functions
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                Good Loot Box functions                                    *
+ * ========================================================================================= */
 
 bool SPawnT1(int client, float[3] vPos)
 {
-	int iWeapon = GetRandomInt(0, 1) == 0 ? WeaponSpawn("weapon_smg_spawn") : WeaponSpawn("weapon_pumpshotgun_spawn");
+	int iWeapon;
+	if( g_bL4D2 ) iWeapon = WeaponSpawn("weapon_spawn", "tier1_any");
+	else iWeapon = GetRandomInt(0, 1) == 0 ? WeaponSpawn("weapon_smg_spawn") : WeaponSpawn("weapon_pumpshotgun_spawn");
+		
 	if (iWeapon == -1)
 		return false;
 		
@@ -1512,7 +1777,9 @@ bool SPawnT1(int client, float[3] vPos)
 
 bool SpawnT2(int client, float[3] vPos)
 {
-	int iWeapon = GetRandomInt(0, 1) == 0 ? WeaponSpawn("weapon_rifle_spawn") : WeaponSpawn("weapon_autoshotgun_spawn");
+	int iWeapon;
+	if( g_bL4D2 ) iWeapon = WeaponSpawn("weapon_spawn", "tier2_any");
+	else iWeapon = GetRandomInt(0, 1) == 0 ? WeaponSpawn("weapon_rifle_spawn") : WeaponSpawn("weapon_autoshotgun_spawn");
 	if( iWeapon == -1 )
 		return false;
 		
@@ -1522,26 +1789,75 @@ bool SpawnT2(int client, float[3] vPos)
 	return true;
 }
 
+bool SpawnT3(int client, float[3] vPos)
+{
+	int iWeapon;
+	if( GetRandomInt(0, 1) == 0 )
+	{
+		iWeapon = WeaponSpawn("weapon_rifle_m60_spawn");
+		if( iWeapon == -1 )
+			return false;
+			
+		TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
+		PrintToChat(client, "%s You have found a \x03M60 rifle\x01.", CHAT_TAG);
+	}
+	else
+	{
+		iWeapon = WeaponSpawn("weapon_grenade_launcher_spawn");
+		if( iWeapon == -1 )
+			return false;
+			
+		TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
+		PrintToChat(client, "%s You have found a \x03grenade launcher\x01.", CHAT_TAG);
+	}
+	EmitAmbientSound(SND_GOOD_OPEN, vPos);
+	return true;
+}
+
 bool SpawnSecondary(int client, float[3] vPos)
 {
 	int iRand = GetRandomInt(1, 3);
-	int iWeapon = WeaponSpawn("weapon_pistol_spawn");
+	float fRand = g_bL4D2 ? GetRandomFloat(0.0, 1.0) : 0.0; // Force pistols in L4D
+	int iWeapon;
 	bool bSpawn;
-	TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
 	
 	for( int i = 0; i < iRand; i++ )
 	{
-		iWeapon = WeaponSpawn("weapon_pistol_spawn");
-		if( iWeapon == -1 )
-			continue;
+		if( fRand < 0.4 )
+		{
+			iWeapon = WeaponSpawn("weapon_pistol_spawn");
+			if( iWeapon == -1 )
+				continue;
+				
+			TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
+			bSpawn = true;
+		}
 			
-		TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
-		bSpawn = true;
+		else if( fRand < 0.8 )
+		{
+			char weaponName[32];
+			strcopy(weaponName, sizeof(weaponName), g_sMeleeList[GetRandomInt(0, sizeof(g_sMeleeList) - 1)]);
+			iWeapon = WeaponSpawn("weapon_melee_spawn", weaponName);
+			if( iWeapon == -1 )
+				continue;
+
+			TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
+			bSpawn = true;
+		}
+		else
+		{
+			iWeapon = WeaponSpawn("weapon_pistol_magnum_spawn");
+			if( iWeapon == -1 )
+				continue;
+				
+			TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
+			bSpawn = true;
+		}			
 	}
 	if( !bSpawn )
 		return false;
 		
-	PrintToChat(client, "%s You have found \x03pistols\x01.", CHAT_TAG);
+	PrintToChat(client, "%s You have found \x03secondary weapons\x01.", CHAT_TAG);
 	EmitAmbientSound(SND_GOOD_OPEN, vPos);
 	return true;
 }
@@ -1549,11 +1865,16 @@ bool SpawnSecondary(int client, float[3] vPos)
 bool SpawnDrugs(int client, float[3] vPos)
 {
 	int iRand = GetRandomInt(1, 4);
+	int iRand2 = g_bL4D2 ? GetRandomInt(0, 1) : 0;
 	int iWeapon;
 	bool bSpawn;
 	for( int i = 0; i < iRand; i++ )
 	{
-		iWeapon = WeaponSpawn("weapon_pain_pills_spawn");		
+		if( iRand2 == 0 )
+			iWeapon = WeaponSpawn("weapon_pain_pills_spawn");
+		else
+			iWeapon = WeaponSpawn("weapon_adrenaline_spawn");
+		
 		if( iWeapon == -1 )
 			continue;
 		
@@ -1563,7 +1884,7 @@ bool SpawnDrugs(int client, float[3] vPos)
 	if( !bSpawn ) 
 		return false;
 		
-	PrintToChat(client, "%s You have found \x03pain pills\x01.", CHAT_TAG);
+	PrintToChat(client, "%s You have found \x03drugs\x01.", CHAT_TAG);
 	EmitAmbientSound(SND_GOOD_OPEN, vPos);
 	return true;
 }
@@ -1571,11 +1892,15 @@ bool SpawnDrugs(int client, float[3] vPos)
 bool SpawnMeds(int client, float[3] vPos)
 {
 	int iRand = GetRandomInt(1, 3);
+	int iRand2 = g_bL4D2 ? GetRandomInt(0, 4) : 1;
 	int iWeapon;
 	bool bSpawn;
 	for( int i = 0; i < iRand; i++ )
 	{
-		iWeapon = WeaponSpawn("weapon_first_aid_kit_spawn");
+		if( iRand2 == 0 )
+			iWeapon = WeaponSpawn("weapon_defibrillator_spawn");
+		else
+			iWeapon = WeaponSpawn("weapon_first_aid_kit_spawn");
 			
 		if( iWeapon == -1 )
 			continue;
@@ -1593,7 +1918,14 @@ bool SpawnMeds(int client, float[3] vPos)
 
 bool SpawnThrowable(int client, float[3] vPos)
 {
-	int iWeapon = GetRandomInt(0, 1) == 0 ? WeaponSpawn("weapon_pipe_bomb_spawn") : WeaponSpawn("weapon_molotov_spawn");
+	int iRand = g_bL4D2 ? GetRandomInt(0, 2) : GetRandomInt(0, 1);
+	int iWeapon;
+	if( iRand == 0 )
+		iWeapon = WeaponSpawn("weapon_pipe_bomb_spawn");
+	else if( iRand == 1 )
+		iWeapon = WeaponSpawn("weapon_molotov_spawn");
+	else
+		iWeapon = WeaponSpawn("weapon_vomitjar_spawn");
 		
 	if( iWeapon == -1 )
 		return false;
@@ -1607,23 +1939,28 @@ bool SpawnThrowable(int client, float[3] vPos)
 bool SpawnItem(int client, float[3] vPos)
 {
 	int iEntity = -1;
+	int iRand = g_bL4D2 ? GetRandomInt(0, 3) : GetRandomInt(1, 3);
 	iEntity = CreateEntityByName("physics_prop");
 	char sName[20];
 	if( iEntity != -1 )
 	{
-		switch( GetRandomInt(0, 2) )
+		switch( iRand )
 		{
 			case 0: {
-				SetEntityModel(iEntity, MODEL_GASCAN);
-				strcopy(sName, sizeof(sName), "gascan");
+				SetEntityModel(iEntity, MODEL_FIREWORK);
+				sName = "firework crate";
 			}
 			case 1: {
-				SetEntityModel(iEntity, MODEL_PROPANETANK);
-				strcopy(sName, sizeof(sName), "propane tank");
+				SetEntityModel(iEntity, MODEL_GASCAN);
+				sName = "gascan";
 			}
 			case 2: {
+				SetEntityModel(iEntity, MODEL_PROPANETANK);
+				sName = "propane tank";
+			}
+			case 3: {
 				SetEntityModel(iEntity, MODEL_OXYGENTANK);
-				strcopy(sName, sizeof(sName), "oxygen tank");
+				sName = "oxygen tank";
 			}
 		}
 		DispatchSpawn(iEntity);
@@ -1632,6 +1969,55 @@ bool SpawnItem(int client, float[3] vPos)
 		return true;
 	}
 	return false;
+}
+
+bool SpawnUpgrade(int client, float[3] vPos)
+{
+	int iWeapon;
+	if( GetRandomInt(0, 1) == 0 )
+		iWeapon = WeaponSpawn("weapon_upgradepack_explosive_spawn");
+	else
+		iWeapon = WeaponSpawn("weapon_upgradepack_explosive_spawn");
+
+	if( iWeapon == -1 )
+		return false;
+		
+	TeleportEntity(iWeapon, vPos, NULL_VECTOR, NULL_VECTOR);
+	PrintToChat(client, "%s You have found an \x03upgrade pack\x01.", CHAT_TAG);
+	EmitAmbientSound(SND_GOOD_OPEN, vPos);
+	return true;
+}
+
+bool SpawnLaser(int client, float[3] vPos)
+{
+	int iArrPos = -1;
+	for( int i = 0; i < MAX_WEAPONS; i++ )
+	{
+		if( g_iWeaponEnt[i] == 0 )
+		{
+			iArrPos = i;
+			break;
+		}
+	}
+	if( iArrPos == -1 )
+		return false;
+
+	int iEntity = -1;
+	iEntity = CreateEntityByName("upgrade_laser_sight");
+	if( iEntity == -1 )
+		return false;
+
+	g_iWeaponEnt[iArrPos] = EntIndexToEntRef(iEntity);
+	TeleportEntity(iEntity, vPos, NULL_VECTOR, NULL_VECTOR);
+	g_hWeaponDeleteTimer[iArrPos] = CreateTimer(g_hWeaponLife.FloatValue, WeaponDelete_Timer, iArrPos);
+	RequestFrame(WeaponSpawn_Frame, iArrPos);
+	for( int i = 1; i <= MaxClients; i++ )
+	{
+		if( i != client && IsClientInGame(i) && !IsFakeClient(i) )
+			PrintToChat(i, "%s \x03%N\x01 has found a \x03laser box\x01.", CHAT_TAG, client);
+	}
+	PrintToChat(client, "%s You have found a \x03laser box\x01.", CHAT_TAG);
+	return true;
 }
 
 void GivePlayerSpeed(int client)
@@ -1792,9 +2178,9 @@ void WipeHalfZombies(int client)
 	PrintToChat(client, "%s You have found \x03The Infinity Gauntlet\x01.", CHAT_TAG);
 }
 
-/*******************************************************************************************
- **	                             Bad LootBox functions
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                 Bad Loot Box functions                                    *
+ * ========================================================================================= */
 
 void SpawnMob(int client, bool mega)
 {
@@ -1884,14 +2270,39 @@ void ReverseControls(int client)
 	if( g_iPlayerBoosts[client] & PN_REVERSE)
 	{
 		delete g_hPlayerReverseTimer[client];
-		g_hPlayerReverseTimer[client] = CreateTimer(30.0, PlayerReverse_Timer, client);
+		g_hPlayerReverseTimer[client] = CreateTimer(g_fNerfTimes[0], PlayerReverse_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03reversed controls\x01.", CHAT_TAG);
 		return;
 	}
-	g_hPlayerReverseTimer[client] = CreateTimer(30.0, PlayerReverse_Timer, client);
+	g_hPlayerReverseTimer[client] = CreateTimer(g_fNerfTimes[0], PlayerReverse_Timer, client);
 	PrintToChat(client, "%s You have obtained \x03reversed controls\x01.", CHAT_TAG);
 	EmitSoundToClient(client, SND_BAD_OPEN);
 	g_iPlayerBoosts[client] |= PN_REVERSE;
+}
+
+void SpitTrap(int client, float[3] vPos)
+{
+	float vAng[3];
+	vAng[2] = 150.0;
+	vPos[2] += 16;
+	int iBot = CreateFakeClient("Loot Box");	//Create a fake infected to display acid sound effect and make survivor bots leave the area
+	ChangeClientTeam(iBot, 3);
+	L4D2_SpitterPrj(iBot, vPos, vAng);
+	
+	for( int i = 0; i < 2; i++ )
+	{
+		vAng[0] = g_fTriSpitForces[i][0];
+		vAng[1] = g_fTriSpitForces[i][1];
+		L4D2_SpitterPrj(iBot, vPos, vAng);
+	}
+	CreateTimer(10.0, RemoveBot_Timer, GetClientSerial(iBot), TIMER_FLAG_NO_MAPCHANGE);
+	
+	for( int i = 1; i <= MaxClients; i++ )
+	{
+		if( IsClientInGame(i) && i != client && !IsFakeClient(i) )
+			PrintToChat(i, "%s \x03%N\x01 has opened a \x03spit trap\x01.", CHAT_TAG, client);
+	}
+	PrintToChat(client, "%s You have opened a \x03spit trap\x01.", CHAT_TAG);
 }
 
 bool SpawnWitch(int client, float[3] vPos)
@@ -1983,6 +2394,22 @@ bool ToxicCloud(int client, float[3] vPos)
 	return true;
 }
 
+bool JockeyRide(int client)
+{
+	float vPos[3];
+	GetClientEyePosition(client, vPos);
+	int result = -1;
+	result = L4D2_SpawnSpecial(ZC_JOCKEY, vPos, NULL_VECTOR);
+	EmitSoundToClient(client, SND_BAD_OPEN);
+	
+	if( result > 0 )
+	{
+		PrintToChat(client, "%s You have found a \x03 Jockey\x01.", CHAT_TAG);
+		return true;
+	}
+	return false;
+}
+
 bool SpawnExplBarrel(int client, float[3] vPos)
 {
 	int iEntity = -1;
@@ -2036,14 +2463,14 @@ void GiveFragility(int client)
 	else if( g_iPlayerBoosts[client] & PN_FRAGILE )
 	{
 		delete g_hPlayerFragileTimer[client];
-		g_hPlayerFragileTimer[client] = CreateTimer(20.0, PlayerFragile_Timer, client);
+		g_hPlayerFragileTimer[client] = CreateTimer(g_fNerfTimes[1], PlayerFragile_Timer, client);
 		EmitSoundToClient(client, SND_BAD_OPEN);
 		PrintToChat(client, "%s You have extended your \x03fragility\x01 effect.", CHAT_TAG);
 	}
 	else
 	{
 		g_iPlayerBoosts[client] |= PN_FRAGILE;
-		g_hPlayerFragileTimer[client] = CreateTimer(20.0, PlayerFragile_Timer, client);
+		g_hPlayerFragileTimer[client] = CreateTimer(g_fNerfTimes[1], PlayerFragile_Timer, client);
 		SDKHook(client, SDKHook_OnTakeDamage, Fragility_Callback);
 		EmitSoundToClient(client, SND_BAD_OPEN);
 		PrintToChat(client, "%s You have found \x03fragility\x01 effect.", CHAT_TAG);
@@ -2060,7 +2487,7 @@ void BearTrap(int client, float[3] vPos)
 
 void RandomAngles(int client)
 {
-	g_fPlayerAngleTime[client] = g_fNerfTimes[2] + GetGameTime();
+	g_fPlayerAngleTime[client] = GetGameTime() + g_fNerfTimes[2];
 	if( g_iPlayerBoosts[client] & PN_ANGLES )
 	{
 		PrintToChat(client, "%s You have extended your \x03random orientation\x01.", CHAT_TAG);
@@ -2068,13 +2495,47 @@ void RandomAngles(int client)
 	}
 	g_iPlayerBoosts[client] |= PN_ANGLES;
 	PrintToChat(client, "%s You have obtained \x03random orientation\x01.",CHAT_TAG);
-	g_hPlayerAnglesTimer[client] = CreateTimer(2.5, PlayerAngles_Timer, client);
+	g_hPlayerAnglesTimer[client] = CreateTimer(2.0, PlayerAngles_Timer, client);
+}
+
+bool SpawnFireworks(int client, float[3] vPos)
+{
+	vPos[2] +=16.0;
+	bool result = false;
+	for( int i = 0; i < 4; i++ )
+	{
+		int iEntity = -1;
+		iEntity = CreateEntityByName("physics_prop");
+		if( iEntity != -1 )
+		{
+			float vForce[3];
+			vForce[0] = 225.0 * ( (i - 1) % 2 );
+			vForce[1] = 225.0 * ( (i - 2) % 2 );
+			vForce[2] = 175.0;
+			SetEntityModel(iEntity, MODEL_FIREWORK);
+			DispatchKeyValue(iEntity, "spawnflags", "4");
+			DispatchSpawn(iEntity);
+			TeleportEntity(iEntity, vPos, NULL_VECTOR, vForce);
+			IgniteEntity(iEntity, 60.0);
+			result = true;
+		}
+	}
+	if( result )
+	{
+		for( int i = 1; i <= MaxClients; i++ )
+		{
+			if( i != client && IsClientInGame(i) && !IsFakeClient(i) )
+				PrintToChat(i, "%s \x03%N\x01 has found \x03firework party\x01.", CHAT_TAG, client);
+		}
+		PrintToChat(client, "%s You have found \x03firework party\x01.", CHAT_TAG);
+	}
+	return result;
 }
 
 bool SpawnFullTeam(int client)
 {
 	bool result = false;
-	for( int i = 1; i < 7; i++ )
+	for( int i = 1; i < (g_bL4D2 ? 7 : 4); i++ )
 	{
 		float vPos[3];
 		int pos = -1;
@@ -2094,9 +2555,9 @@ bool SpawnFullTeam(int client)
 	return result;
 }
 
-/*******************************************************************************************
- **	                                  Weapon Handling
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                     Weapon Handling                                       *
+ * ========================================================================================= */
 
 public void WH_OnMeleeSwing(int client, int weapon, float &speedmodifier)
 {
@@ -2139,9 +2600,9 @@ float SpeedModifier(int client, float speedmodifier)
 	return speedmodifier;
 }
 
-/*******************************************************************************************
- **		      						Other functions
- *******************************************************************************************/
+/* ========================================================================================= *
+ *                                    Other functions                                        *
+ * ========================================================================================= */
 
 int PrecacheParticle(const char[] sEffectName)
 {
@@ -2164,8 +2625,21 @@ int PrecacheParticle(const char[] sEffectName)
     return index;
 }  
 
-int WeaponSpawn(const char[] className)
+int WeaponSpawn(const char[] className, const char[] weaponType = "none")
 {
+	// Try to find an available spot for the entity in the array list, if there is no space, delete entity & return -1
+	int iArrPos = -1;
+	for( int i = 0; i < MAX_WEAPONS; i++ )
+	{
+		if( g_iWeaponEnt[i] == 0 )
+		{
+			iArrPos = i;
+			break;
+		}
+	}
+	if( iArrPos == -1 )
+		return -1;
+
 	int iEntity = -1;
 	iEntity = CreateEntityByName(className);
 	if( iEntity != -1 )
@@ -2175,6 +2649,13 @@ int WeaponSpawn(const char[] className)
 		DispatchKeyValue(iEntity, "count", "1");
 		DispatchKeyValue(iEntity, "spawn_without_director", "1");
 		DispatchKeyValue(iEntity, "body", "0");
+		if( StrEqual(className, "weapon_spawn", false) && !StrEqual(weaponType, "none", false) )
+			DispatchKeyValue(iEntity, "weapon_selection", weaponType);
+			
+		else if( StrEqual(className, "weapon_melee_spawn") && !StrEqual(weaponType, "none", false) )
+			DispatchKeyValue(iEntity, "melee_weapon", weaponType);
+		
+		g_iWeaponEnt[iArrPos] = EntIndexToEntRef(iEntity);
 	}
 	else
 	{
@@ -2182,28 +2663,13 @@ int WeaponSpawn(const char[] className)
 		return -1;
 	}
 	
-	// Try to find an available spot for the entity in the array list, if there is no space, delete entity & return -1
-	int iArrPos = -1;
-	for( int i = 0; i < MAX_WEAPONS; i++ )
-	{
-		if( g_iWeaponEnt[i] == 0 )
-		{
-			g_iWeaponEnt[i] = EntIndexToEntRef(iEntity);
-			iArrPos = i;
-			break;
-		}
-	}
-	if( iArrPos == -1 )
-	{
-		RemoveEntity(iEntity);
-		return -1;
-	}
 	float fTime;
 	if( (fTime = g_hWeaponLock.FloatValue) > 0.0 )
 		g_hWeaponUnlockTimer[iArrPos] = CreateTimer(fTime, WeaponUnlock_Timer, iArrPos);
 		
 	g_hWeaponDeleteTimer[iArrPos] = CreateTimer(g_hWeaponLife.FloatValue, WeaponDelete_Timer, iArrPos);
 	RequestFrame(WeaponSpawn_Frame, iArrPos);
+	SDKHook(iEntity, SDKHook_Use, Weapon_Used);
 	return iEntity;
 }
 
@@ -2239,6 +2705,7 @@ int SetPlayerParticle(int client, char[] particleName)
 bool CheckPlayerBoost(int client, int boostType)
 {
 	bool result = false;
+	int entity = EntRefToEntIndex(g_iPlayerParticle[client]);
 	
 	if( g_iPlayerBoosts[client] & PB_SPEED )
 	{
@@ -2249,8 +2716,8 @@ bool CheckPlayerBoost(int client, int boostType)
 			delete g_hPlayerSpeedTimer[client];
 			g_iPlayerBoosts[client] &= ~PB_SPEED;
 			DefaultPlayerSpeed(client);	
-			if( IsValidEntity(g_iPlayerParticle[client]) )
-				RemoveEntity(g_iPlayerParticle[client]);
+			if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+				RemoveEntity(entity);
 		}
 	}
 	if( g_iPlayerBoosts[client] & PB_REGEN )
@@ -2262,8 +2729,8 @@ bool CheckPlayerBoost(int client, int boostType)
 			delete g_hPlayerRegenTimer[client];
 			g_iPlayerBoosts[client] &= ~PB_REGEN;
 			StopSound(client, SNDCHAN_AUTO, SND_REGEN);
-			if( IsValidEntity(g_iPlayerParticle[client]) )
-				RemoveEntity(g_iPlayerParticle[client]);
+			if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+				RemoveEntity(entity);
 
 		}
 	}
@@ -2297,8 +2764,8 @@ bool CheckPlayerBoost(int client, int boostType)
 			delete g_hPlayerFireTimer[client];
 			StopSound(client, SNDCHAN_AUTO, SND_FIRE);
 			g_iPlayerBoosts[client] &= ~PB_FIRE;
-			if( IsValidEntity(g_iPlayerParticle[client]) )
-				RemoveEntity(g_iPlayerParticle[client]);
+			if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+				RemoveEntity(entity);
 		}
 	}
 	if( g_iPlayerBoosts[client] & PB_EXPL )
@@ -2332,7 +2799,22 @@ void ResetClientData(int client)
 			
 	g_iPlayerBoosts[client] = PB_NONE;
 
-	
-	if( g_iPlayerParticle[client] && IsValidEntity(g_iPlayerParticle[client]) )
-		RemoveEntity(g_iPlayerParticle[client]);
+	int entity = EntRefToEntIndex(g_iPlayerParticle[client]);
+	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
+		RemoveEntity(entity);
 }
+
+/*============================================================================================
+                                          Changelog
+----------------------------------------------------------------------------------------------
+* 1.1	(25-Dec-2021)
+		- Merged Left 4 Dead and Left 4 Dead 2 plugin files.
+		- Fixed error with Toxic Cloud that limited the amount of clouds per round to 8.
+		- Fixed error where infinite ammo boost was not working properly.
+        - Optimized client weapon check for infinte ammo boost.
+		- Fixed warning messages for SM 1.11
+		- Added new ConVar (l4d2_lootbox_fragility_multiplier).
+		
+* 1.0	(14-Jun-2022)
+		- Initial release.
+============================================================================================*/
