@@ -703,7 +703,7 @@ void GetBoostTimes()
  *                             Events, SDKHooks, Left4DHooks                                 *
  * ========================================================================================= */ 
 
-public Action Event_Round_Start(Event event, const char[] name, bool dontBroadcast)
+Action Event_Round_Start(Event event, const char[] name, bool dontBroadcast)
 {
 	for( int i = 1; i <= MaxClients; i++ )
 		ResetClientData(i);
@@ -713,14 +713,14 @@ public Action Event_Round_Start(Event event, const char[] name, bool dontBroadca
 	WipeClouds();
 }
 
-public Action Event_Round_End(Event event, const char[] name, bool dontBroadcast)
+Action Event_Round_End(Event event, const char[] name, bool dontBroadcast)
 {
 	WipeLootBoxes();
 	WipeWeapons();
 	WipeClouds();
 }
 
-public Action Event_Player_Death(Event event, const char[] name, bool dontBroadcast)
+Action Event_Player_Death(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if( !client ) 
@@ -758,7 +758,7 @@ public Action Event_Player_Death(Event event, const char[] name, bool dontBroadc
 	return Plugin_Continue;
 }
 
-public Action Event_Weapon_Fire(Event event, const char[] name, bool dontBroadcast)
+Action Event_Weapon_Fire(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if( g_iPlayerBoosts[client] & PB_IAMMO == 0 )
@@ -800,12 +800,12 @@ public Action Event_Weapon_Fire(Event event, const char[] name, bool dontBroadca
 		iSlot = 0;
 		iClip = 1;
 	}
-	else if( strncmp(sWeapon, "pump", 4) || strncmp(sWeapon[8], "chro", 4) == 0 ) // pumpshotgun, shotgun_chrome
+	else if( strncmp(sWeapon, "pump", 4) == 0 || strncmp(sWeapon[8], "chro", 4) == 0 ) // pumpshotgun, shotgun_chrome
 	{
 		iSlot = 0;
 		iClip = 8;
 	}
-	else if( strncmp(sWeapon, "auto", 4) || strncmp(sWeapon[8], "spas", 4) == 0 ) // autoshotgun, shotgun_spas
+	else if( strncmp(sWeapon, "auto", 4) == 0 || strncmp(sWeapon[8], "spas", 4) == 0 ) // autoshotgun, shotgun_spas
 	{
 		iSlot = 0;
 		iClip = 10;
@@ -841,7 +841,8 @@ public Action Event_Weapon_Fire(Event event, const char[] name, bool dontBroadca
 	return Plugin_Continue;
 }
 
-public Action Event_Weapon_Fire_1(Event event, const char[] name, bool dontBroadcast)
+// The same but for Left 4 Dead 1, since it has less weapon names to check
+Action Event_Weapon_Fire_1(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if( g_iPlayerBoosts[client] & PB_IAMMO == 0 )
@@ -873,6 +874,11 @@ public Action Event_Weapon_Fire_1(Event event, const char[] name, bool dontBroad
 		iSlot = 0;
 		iClip = 10;
 	}
+	else if ( strncmp(sWeapon, "hunt", 4) == 0 ) // hunting_rifle
+	{
+		iSlot = 0;
+		iClip = 15;
+	}
 	if( iSlot != -1 )
 	{
 		int iWeapon = GetPlayerWeaponSlot(client, iSlot);
@@ -882,7 +888,7 @@ public Action Event_Weapon_Fire_1(Event event, const char[] name, bool dontBroad
 	return Plugin_Continue;
 }
 
-public Action Event_Infected_Hurt(Event event, const char[] name, bool dontBroadcast)
+Action Event_Infected_Hurt(Event event, const char[] name, bool dontBroadcast)
 {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
 	int infected = event.GetInt("entityid");
@@ -893,7 +899,7 @@ public Action Event_Infected_Hurt(Event event, const char[] name, bool dontBroad
 	return Plugin_Continue;
 }
 
-public Action Event_Player_Hurt(Event event, const char[] name, bool dontBroadcast)
+Action Event_Player_Hurt(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
@@ -919,7 +925,7 @@ public Action Event_Player_Hurt(Event event, const char[] name, bool dontBroadca
 	return Plugin_Continue;
 }
 
-public Action Event_Bullet_Impact(Event event, const char[] name, bool dontBroadcast)
+Action Event_Bullet_Impact(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));	// Get the player who shooted
 	if( g_iPlayerBoosts[client] & PB_EXPL && !g_bPlayerExpl[client] )
@@ -948,6 +954,9 @@ public Action Event_Bullet_Impact(Event event, const char[] name, bool dontBroad
 		g_bPlayerExpl[client] = true;
 		CreateTimer(0.2, EnableExpl_Timer, client);
 		// Play an explosion sound
+		if( !g_bL4D2 )
+			return Plugin_Continue;
+			
 		switch (GetRandomInt(1,3))
 		{
 			case 1: EmitAmbientSound(SND_EXPL1, vPos);
@@ -955,9 +964,10 @@ public Action Event_Bullet_Impact(Event event, const char[] name, bool dontBroad
 			case 3: EmitAmbientSound(SND_EXPL3, vPos);
 		}
 	}
+	return Plugin_Continue;
 }
 
-public Action Invulnerability_Callback(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+Action Invulnerability_Callback(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	// Player, ignore damage
 	if( attacker <= MaxClients && attacker > 0 )
@@ -980,7 +990,7 @@ public Action Invulnerability_Callback(int victim, int& attacker, int& inflictor
 	return Plugin_Continue;
 }
 
-public Action Fragility_Callback(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
+Action Fragility_Callback(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	// Just ignore teammates
 	if( attacker <= MaxClients && attacker > 0 )
@@ -993,7 +1003,7 @@ public Action Fragility_Callback(int victim, int& attacker, int& inflictor, floa
 	return Plugin_Changed;
 }
 
-public Action IgnoreExplosions_Callback(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+Action IgnoreExplosions_Callback(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom)
 {
 	if( GetClientTeam(victim) != 2 )
 		return Plugin_Continue;
@@ -1057,7 +1067,7 @@ public Action L4D_OnSpawnMob(int &amount)
  *                                       Admin Commands                                      *
  * ========================================================================================= */
  
-public Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes at player position DISABLED
+Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes at player position DISABLED
 {
 	if( !g_bPluginOn ) return Plugin_Handled;
 	if( !client )
@@ -1093,7 +1103,7 @@ public Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes 
 }
 
 // This one can be called via server console, because it doesn't require player angles or position
-public Action AdminWipeEnts(int client, int args)
+Action AdminWipeEnts(int client, int args)
 {
 	if( !g_bPluginOn ) return Plugin_Handled;
 	
@@ -1474,7 +1484,7 @@ bool SpawnLootBox(float origin[3], float angles[3], float force[3])
 	return false;
 }
 
-public Action LootBox_Used(int entity, int caller, int activator, UseType type, float value)
+Action LootBox_Used(int entity, int caller, int activator, UseType type, float value)
 {
 	// First check if player is able to open the box
 	if( g_fPlayerUse[activator] + 3.0 > GetGameTime() )
@@ -1511,7 +1521,7 @@ public Action LootBox_Used(int entity, int caller, int activator, UseType type, 
 	return Plugin_Continue;
 }
 
-public Action Weapon_Used(int entity, int caller, int activator, UseType type, float value)
+Action Weapon_Used(int entity, int caller, int activator, UseType type, float value)
 {
 	// Just a stupid bot trying to steal the weapon
 	if( IsFakeClient(activator) )
@@ -2101,6 +2111,7 @@ void GivePlayerInfAmmo(int client)
 {
 	if( CheckPlayerBoost(client, PB_IAMMO) )
 	{
+		delete g_hPlayerAmmoTimer[client];
 		g_hPlayerAmmoTimer[client] = CreateTimer(g_fBoostTimes[4], PlayerInfAmmo_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03infinite ammo\x01.", CHAT_TAG);
 		return;
@@ -2807,13 +2818,14 @@ void ResetClientData(int client)
 /*============================================================================================
                                           Changelog
 ----------------------------------------------------------------------------------------------
-* 1.1	(25-Dec-2021)
+* 1.1	(16-Jun-2021)
 		- Merged Left 4 Dead and Left 4 Dead 2 plugin files.
 		- Fixed error with Toxic Cloud that limited the amount of clouds per round to 8.
 		- Fixed error where infinite ammo boost was not working properly.
         - Optimized client weapon check for infinte ammo boost.
 		- Fixed warning messages for SM 1.11
 		- Added new ConVar (l4d2_lootbox_fragility_multiplier).
+		- Removed public function declarations where they where not required.
 		
 * 1.0	(14-Jun-2022)
 		- Initial release.
