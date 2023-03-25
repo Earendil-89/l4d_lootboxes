@@ -563,16 +563,18 @@ void GetProbs()
 	g_iPosWeightSum = 0;
 	g_iNegWeightSum = 0;
 	int iArrSize;
-	
+	int iPosSize = g_bL4D2 ? POS_SIZE : POS_SIZE_1;
+	int iNegSize = g_bL4D2 = NEG_SIZE: NEG_SIZE_1;
+
 	g_hPosWeight.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != POS_SIZE )
+	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iPosSize )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_positive_weights> value amount. Expected %d, found %d", POS_SIZE, iArrSize);
+		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_positive_weights> value amount. Expected %d, found %d", iPosSize, iArrSize);
 		ExplodeString(POS_WEIGHTS, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hPosWeight.RestoreDefault(false, false);
 	}
 			
-	for( int i = 0; i < POS_SIZE; i++ )
+	for( int i = 0; i < iPosSize; i++ )
 	{
 		g_iPosWeights[i] = StringToInt(sBuffer[i]);
 		if( g_iPosWeights[i] < 0 ) g_iPosWeights[i] = 0;
@@ -581,14 +583,14 @@ void GetProbs()
 	}
 	
 	g_hNegRes.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != NEG_SIZE )
+	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iNegSize )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_negative_weights> value amount. Expected %d, found %d", NEG_SIZE, iArrSize);
+		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_negative_weights> value amount. Expected %d, found %d", iNegSize, iArrSize);
 		ExplodeString(NEG_WEIGHTS, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hNegRes.RestoreDefault(false, false);
 	}
 			
-	for( int i = 0; i < NEG_SIZE; i++ )
+	for( int i = 0; i < iNegSize; i++ )
 	{
 		g_iNegWeights[i] = StringToInt(sBuffer[i]);
 		if( g_iNegWeights[i] < 0 ) g_iNegWeights[i] = 0;
