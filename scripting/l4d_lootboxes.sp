@@ -2285,7 +2285,7 @@ void SpawnMob(int client, bool mega)
 	{
 		for( int i = 1; i <= MaxClients; i++ )
 		{
-			if( IsClientInGame(i) && !IsFakeClient(i) )
+			if( i != client && IsClientInGame(i) && !IsFakeClient(i) )
 				PrintToChat(i, "%s \x03%N\x01 has found \x03some zombies\x01.", CHAT_TAG, client);
 		}
 		PrintToChat(client, "%s You have found \x03some zombies\x01.", CHAT_TAG);
