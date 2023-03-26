@@ -50,7 +50,7 @@
 #define MODEL_PROPANETANK	"models/props_junk/propanecanister001a.mdl"
 #define MODEL_OXYGENTANK	"models/props_equipment/oxygentank01.mdl"
 
-//#define TN_BOX				"Lootbox.Entity.Crate"	// Box entity targetname
+#define TN_BOX				"Lootbox.Entity"	// Box entity targetname
 #define PARTICLE_BOOMER		"boomer_explode"
 #define PARTICLE_EMBERS		"embers_small_01"
 #define PARTICLE_SMOKE		"apc_wheel_smoke1"
@@ -82,7 +82,7 @@
 #define SND_BEARTRAP_1		"doors/door_metal_thin_close2.wav"
 
 
-#define POS_WEIGHTS			"35,100,15,30,60,10,45,65,35,10,5,5,5,5,5,5,5"			// 17 values in total
+#define POS_WEIGHTS			"35,100,15,30,60,10,45,65,35,10,5,5,5,5,5,5,5,10"		// 17 values in total
 #define NEG_WEIGHTS			"100,60,100,50,50,20,15,85,40,15,50,60,15,25,40,55,85"	// 17 values in total
 #define SI_CHANCES			"8.0,8.0,8.0,8.0,8.0,8.0"			// 6 values, one for each special
 #define BOOST_TIMES			"30.0,25.0,20.0,30.0,25.0,15.0"		// 6 values
@@ -122,6 +122,7 @@ enum
 	POS_IAMMO,
 	POS_EXPL,
 	POS_THANOS,
+	POS_RESURRECTION,
 	POS_SIZE
 };
 
@@ -564,7 +565,7 @@ void GetProbs()
 	g_iNegWeightSum = 0;
 	int iArrSize;
 	int iPosSize = g_bL4D2 ? POS_SIZE : POS_SIZE_1;
-	int iNegSize = g_bL4D2 = NEG_SIZE: NEG_SIZE_1;
+	int iNegSize = g_bL4D2 ? NEG_SIZE: NEG_SIZE_1;
 
 	g_hPosWeight.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iPosSize )
@@ -1077,7 +1078,6 @@ Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes at play
 		ReplyToCommand(client, "[LB] Commands can be only used in game.");
 		return Plugin_Handled;
 	}
-	
 	float vPos[3], vAng[3];
 	if( !IsValidPosition(client, vPos, vAng) )
 	{
@@ -1101,6 +1101,7 @@ Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes at play
 			break;
 		}
 	}
+	ResurrectClient(client, vPos);
 	return Plugin_Handled;
 }
 
@@ -1470,7 +1471,7 @@ bool SpawnLootBox(float origin[3], float angles[3], float force[3])
 		g_hLootBoxTimer[index] = CreateTimer(g_hBoxLifeTime.FloatValue, BoxLife_Timer, index); // Parse the array index
 
 		DispatchKeyValue(entity, "model", MODEL_BOX);
-//		DispatchKeyValue(entity, "targetname", TN_BOX);		// Not used really
+		DispatchKeyValue(entity, "targetname", TN_BOX);
 		DispatchKeyValue(entity, "spawnflags", "8448");		// "Don`t take physics damage" + "Generate output on +USE" + "Force Server Side"
 		DispatchKeyValue(entity, "glowstate", "3");
 		DispatchKeyValue(entity, "glowcolor", "195 195 0");
@@ -1597,6 +1598,7 @@ bool OpenPos(float vPos[3], int client)
 			case POS_IAMMO: GivePlayerInfAmmo(client);
 			case POS_EXPL: GivePlayerExplosive(client);
 			case POS_THANOS: WipeHalfZombies(client);
+			case POS_RESURRECTION: return ResurrectClient(client, vPos);
 		}
 	}
 	else
@@ -1727,12 +1729,15 @@ bool IsValidPosition(int client, float vPos[3], float vAng[3])
 	return true;
 }
 
-bool FoundObstacle(const float vPos[3])
+bool FoundObstacle(const float vPos[3], const float distance = 64.0, const bool filterIgnoreBoxes = false)
 {
 	float vAng[3], vEnd[3];
 	Handle trace2;
 	vAng[0] = -90.0;
-	trace2 = TR_TraceRayFilterEx(vPos, vAng, MASK_NPCSOLID_BRUSHONLY, RayType_Infinite, _TraceFilter);
+	if( !filterIgnoreBoxes )
+		trace2 = TR_TraceRayFilterEx(vPos, vAng, MASK_NPCSOLID_BRUSHONLY, RayType_Infinite, _TraceFilter);
+	else
+		trace2 = TR_TraceRayFilterEx(vPos, vAng, MASK_NPCSOLID_BRUSHONLY, RayType_Infinite, _TraceFilterIgnoreBoxes);
 	if( TR_DidHit(trace2) )
 	{
 		TR_GetEndPosition(vEnd, trace2);
@@ -1747,11 +1752,14 @@ bool FoundObstacle(const float vPos[3])
 	for( int i = 0; i < 8; i++ )
 	{
 		vAng[1] = 45.0 * i;
-		trace2 = TR_TraceRayFilterEx(vPos, vAng, MASK_NPCSOLID_BRUSHONLY, RayType_Infinite, _TraceFilter);
+		if( !filterIgnoreBoxes )
+			trace2 = TR_TraceRayFilterEx(vPos, vAng, MASK_NPCSOLID_BRUSHONLY, RayType_Infinite, _TraceFilter);
+		else
+			trace2 = TR_TraceRayFilterEx(vPos, vAng, MASK_NPCSOLID_BRUSHONLY, RayType_Infinite, _TraceFilterIgnoreBoxes);
 		if( TR_DidHit(trace2) )
 		{
 			TR_GetEndPosition(vEnd, trace2);
-			if( GetVectorDistance(vEnd, vPos, true) < 64.0 )
+			if( GetVectorDistance(vEnd, vPos, true) < distance )
 			{
 				delete trace2;
 				return true;
@@ -1768,6 +1776,16 @@ bool _TraceFilter(int entity, int contentsMask)
 	return entity > MaxClients;
 }
 
+bool _TraceFilterIgnoreBoxes(int entity, int contentsMask)
+{
+	if( !entity ) return true;
+	char sName[32];
+	GetEntPropString(entity, Prop_Data, "m_iName", sName, sizeof(sName));
+	if( strncmp(sName[0], TN_BOX, 14) == 0 )
+		return false;
+	
+	return entity > MaxClients;
+}
 /* ========================================================================================= *
  *                                Good Loot Box functions                                    *
  * ========================================================================================= */
@@ -2191,6 +2209,57 @@ void WipeHalfZombies(int client)
 	PrintToChat(client, "%s You have found \x03The Infinity Gauntlet\x01.", CHAT_TAG);
 }
 
+bool ResurrectClient(int client, float vPos[3])
+{
+	int[] deadSurvivors = new int[MaxClients + 1];	// Array to be filled with dead survivor ids
+	int count = 0;
+	// Fill the array
+	for( int i = 1; i <= MaxClients; i++ )
+	{
+		if( !IsClientInGame(i) )
+			continue;
+		
+		if( GetClientTeam(i) == 2 && !IsPlayerAlive(i) )
+		{
+			deadSurvivors[count] = i;
+			count++;
+		}
+	}
+	if( !count )
+		return false;
+
+	// Pick a random dead survivor and revive it
+	int rnd = GetRandomInt(0, count - 1);
+	if( g_bL4D2 ) L4D2_VScriptWrapper_ReviveByDefib(deadSurvivors[rnd]);
+	else L4D_RespawnPlayer(deadSurvivors[rnd]);
+
+	// Teleport the survivor to the lootobx position if available
+	if( !FoundObstacle(vPos, 576.0, true) )
+		TeleportEntity(deadSurvivors[rnd], vPos, NULL_VECTOR, NULL_VECTOR);
+	// Teleport the survivor to the client origin
+	else
+	{
+		float vClient[3];
+		GetClientAbsOrigin(client, vClient);
+		TeleportEntity(deadSurvivors[rnd], vClient, NULL_VECTOR, NULL_VECTOR);
+	}
+
+	// Print message
+	for( int i = 1; i < MaxClients; i++ )
+	{
+		if( !IsClientInGame(i) || IsFakeClient(i) )
+			continue;
+
+		if( i == client )
+			PrintToChat(i, "%sYou have respawned \x03%N \x01with a LootBox.", CHAT_TAG, deadSurvivors[rnd]);
+		else if( i == deadSurvivors[rnd] )
+			PrintToChat(i, "%sYou have been respawned by \x03%N \x01with a LootBox.", CHAT_TAG, client);
+		else
+			PrintToChat(i, "%s\x03%N \x01has respawned \x03%N \x01with a LootBox.", CHAT_TAG, client, deadSurvivors[rnd]);
+	}
+
+	return true;
+}
 /* ========================================================================================= *
  *                                 Bad Loot Box functions                                    *
  * ========================================================================================= */
