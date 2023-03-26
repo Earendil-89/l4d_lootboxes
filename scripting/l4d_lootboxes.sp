@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------------------- *
  *  Author      :   Eärendil                                                                *
  *  Descrp      :   Zombies drop boxes with good or bad results                             *
- *  Version     :   1.1                                                                     *
+ *  Version     :   1.2                                                                     *
  *  Link        :   https://forums.alliedmods.net/showthread.php?p=2781646#post2781646      *
  * ======================================================================================== *
  *                                                                                          *
@@ -33,7 +33,7 @@
 #include <survivorutilities>
 #include <weaponhandling>
 
-#define PLUGIN_VERSION		"1.1"
+#define PLUGIN_VERSION		"1.2-SNAPSHOT"
 #define FCVAR_FLAGS			FCVAR_NOTIFY
 // Limit entities to prevent server crashes due to entity limit
 #define MAX_LBOXES			64
@@ -122,7 +122,7 @@ enum
 	POS_IAMMO,
 	POS_EXPL,
 	POS_THANOS,
-	POS_RESURRECTION,
+	POS_RESPAWN,
 	POS_SIZE
 };
 
@@ -164,6 +164,7 @@ enum
 	POS_IAMMO_1,
 	POS_EXPL_1,
 	POS_THANOS_1,
+	POS_RESPAWN_1,
 	POS_SIZE_1
 }
 
@@ -1101,7 +1102,6 @@ Action AdminSpawnBox(int client, int args)		// Admin can spawn lootboxes at play
 			break;
 		}
 	}
-	ResurrectClient(client, vPos);
 	return Plugin_Handled;
 }
 
@@ -1598,7 +1598,7 @@ bool OpenPos(float vPos[3], int client)
 			case POS_IAMMO: GivePlayerInfAmmo(client);
 			case POS_EXPL: GivePlayerExplosive(client);
 			case POS_THANOS: WipeHalfZombies(client);
-			case POS_RESURRECTION: return ResurrectClient(client, vPos);
+			case POS_RESPAWN: return RespawnClient(client, vPos);
 		}
 	}
 	else
@@ -1619,11 +1619,12 @@ bool OpenPos(float vPos[3], int client)
 			case POS_IAMMO_1: GivePlayerInfAmmo(client);
 			case POS_EXPL_1: GivePlayerExplosive(client);
 			case POS_THANOS_1: WipeHalfZombies(client);
-
+			case POS_RESPAWN_1: return RespawnClient(client, vPos);
 		}
 	}
 	return true;
 }
+
 
 bool OpenNeg(float vPos[3], int client)
 {
@@ -2209,7 +2210,7 @@ void WipeHalfZombies(int client)
 	PrintToChat(client, "%s You have found \x03The Infinity Gauntlet\x01.", CHAT_TAG);
 }
 
-bool ResurrectClient(int client, float vPos[3])
+bool RespawnClient(int client, float vPos[3])
 {
 	int[] deadSurvivors = new int[MaxClients + 1];	// Array to be filled with dead survivor ids
 	int count = 0;
