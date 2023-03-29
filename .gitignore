@@ -1,0 +1,5 @@
+#ignore workflows
+/.github/workflows
+
+#ignore .vscode
+/.vscode

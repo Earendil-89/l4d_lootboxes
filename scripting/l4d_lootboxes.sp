@@ -749,15 +749,15 @@ Action Event_Player_Death(Event event, const char[] name, bool dontBroadcast)
 		GetClientAbsOrigin(client, vPos);
 		vPos[2] += 16.0;
 		int iClass = GetEntProp(client, Prop_Send, "m_zombieClass");
-		if( (g_bL4D2 && iClass != ZC_TANK) || iClass != ZC_TANK_1 )
+		if( (g_bL4D2 && iClass == ZC_TANK) || (!g_bL4D2 && iClass == ZC_TANK_1) )
 		{
-			float fRand = GetRandomFloat(0.0, 100.0);
-			// Array range: 0-5, infected range 1-6.
-			if( fRand <= g_fSpecialDrops[iClass - 1] )
-				RandomLootBoxSpawn(vPos, 1, 1);
-		}
-		else
 			RandomLootBoxSpawn(vPos, g_iTankDrops[0], g_iTankDrops[1]);
+			return Plugin_Continue;
+		}
+		float fRand = GetRandomFloat(0.0, 100.0);
+		// Array range: 0-5, infected range 1-6.
+		if( fRand <= g_fSpecialDrops[iClass - 1] )
+			RandomLootBoxSpawn(vPos, 1, 1);			
 	}
 	return Plugin_Continue;
 }
@@ -1322,6 +1322,7 @@ Action PlayerFragile_Timer(Handle timer, int client)
 		return Plugin_Continue;
 		
 	PrintToChat(client, "%s \x03Fragility\x01 ended.", CHAT_TAG);
+	SDKUnhook(client, SDKHook_OnTakeDamage, Fragility_Callback);
 	EmitSoundToClient(client, SND_BOOST_END);
 	return Plugin_Continue;
 }
@@ -1787,6 +1788,7 @@ bool _TraceFilterIgnoreBoxes(int entity, int contentsMask)
 	
 	return entity > MaxClients;
 }
+
 /* ========================================================================================= *
  *                                Good Loot Box functions                                    *
  * ========================================================================================= */
