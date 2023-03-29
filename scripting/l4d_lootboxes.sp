@@ -82,14 +82,14 @@
 #define SND_BEARTRAP_1		"doors/door_metal_thin_close2.wav"
 
 
-#define POS_WEIGHTS			"35,100,15,30,60,10,45,65,35,10,5,5,5,5,5,5,5,10"		// 17 values in total
-#define NEG_WEIGHTS			"100,60,100,50,50,20,15,85,40,15,50,60,15,25,40,55,85"	// 17 values in total
+#define POS_WEIGHTS			"35,100,15,30,60,10,45,65,35,10,5,5,5,5,5,5,5,10"		// 18 values in total
+#define NEG_WEIGHTS			"100,60,100,50,50,20,15,85,40,15,50,60,15,25,40,55,85,60"	// 18 values in total
 #define SI_CHANCES			"8.0,8.0,8.0,8.0,8.0,8.0"			// 6 values, one for each special
 #define BOOST_TIMES			"30.0,25.0,20.0,30.0,25.0,15.0"		// 6 values
 #define NERF_TIMES			"60.0,25.0,50.0"					// 3 values
 // Because L4D has less special infected and box options
-#define POS_WEIGHTS_1		"35,100,30,60,10,45,65,5,5,5,5,5,5,5"
-#define NEG_WEIGHTS_1		"100,60,100,50,20,15,40,15,50,60,15,25,40,85"
+#define POS_WEIGHTS_1		"35,100,30,60,10,45,65,5,5,5,5,5,5,5,10"			// 15 values
+#define NEG_WEIGHTS_1		"100,60,100,50,20,15,40,15,50,60,15,25,40,85,15"	// 15 values
 #define SI_CHANCES_1		"8.0,8.0,8.0"
 
 
@@ -145,6 +145,7 @@ enum
 	NEG_ANGLES,
 	NEG_FIREWORK,
 	NEG_FULLSI,
+	NEG_TITANS,
 	NEG_SIZE
 };
 //	L4D box opens
@@ -184,6 +185,7 @@ enum
 	NEG_BEARTRAP_1,
 	NEG_ANGLES_1,
 	NEG_FULLSI_1,
+	NEG_TITANS_1,
 	NEG_SIZE_1
 };
 
@@ -1663,6 +1665,7 @@ bool OpenNeg(float vPos[3], int client)
 			case NEG_ANGLES: RandomAngles(client);
 			case NEG_FIREWORK: return SpawnFireworks(client, vPos);
 			case NEG_FULLSI: return SpawnFullTeam(client);
+			case NEG_TITANS: MakeTitanZombies(client);
 		}
 	}
 	else
@@ -1683,8 +1686,8 @@ bool OpenNeg(float vPos[3], int client)
 			case NEG_BEARTRAP_1: BearTrap(client, vPos);
 			case NEG_ANGLES_1: RandomAngles(client);
 			case NEG_FULLSI_1: return SpawnFullTeam(client);
+			case NEG_TITANS_1: MakeTitanZombies(client);
 		}
-
 	}
 	return true;
 }
@@ -1778,6 +1781,7 @@ bool _TraceFilter(int entity, int contentsMask)
 	return entity > MaxClients;
 }
 
+// Used when a survivor spawns at the lootbox position, if not, it will detect a fail on spawn
 bool _TraceFilterIgnoreBoxes(int entity, int contentsMask)
 {
 	if( !entity ) return true;
@@ -2640,6 +2644,20 @@ bool SpawnFullTeam(int client)
 	return result;
 }
 
+void MakeTitanZombies(int client)
+{
+	int zombie = -1;
+	while( (zombie = FindEntityByClassname(zombie, "infected")) != -1 ) 
+	{
+		// Scale healths
+		int health = GetEntProp(zombie, Prop_Data, "m_iHealth");
+		int maxHealth = GetEntProp(zombie, Prop_Data, "m_iMaxHealth");
+		SetEntProp(zombie, Prop_Data, "m_iHealth", health * 4);
+		SetEntProp(zombie, Prop_Data, "m_iMaxHealth", maxHealth * 4);
+		// Scale size
+		SetEntPropFloat(zombie, Prop_Send,"m_flModelScale", 3.0); 
+	}
+}
 /* ========================================================================================= *
  *                                     Weapon Handling                                       *
  * ========================================================================================= */
