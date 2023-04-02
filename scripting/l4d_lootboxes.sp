@@ -40,6 +40,7 @@
 #define MAX_TOXCLOUD		8
 #define MAX_WEAPONS			96
 #define CHAT_TAG			"\x04[\x05LB\x04] \x01"
+#define SERVER_TAG			"[LB] "
 
 #define MODEL_BOX			"models/props_junk/cardboard_box07.mdl"
 #define MODEL_BARREL		"models/props_industrial/barrel_fuel.mdl"
@@ -80,18 +81,14 @@
 #define SND_THANOS_1		"ui/holdout_medal.wav"
 #define SND_SHIELD_1		"physics/metal/metal_barrel_impact_soft1.wav"
 #define SND_BEARTRAP_1		"doors/door_metal_thin_close2.wav"
+// Default config filename
+#define DEFAULT_CFG			"data/lootboxes_weights.cfg"
 
-
-#define POS_WEIGHTS			"35,100,15,30,60,10,45,65,35,10,5,5,5,5,5,5,5,10"		// 18 values in total
-#define NEG_WEIGHTS			"100,60,100,50,50,20,15,85,40,15,50,60,15,25,40,55,85,60"	// 18 values in total
 #define SI_CHANCES			"8.0,8.0,8.0,8.0,8.0,8.0"			// 6 values, one for each special
 #define BOOST_TIMES			"30.0,25.0,20.0,30.0,25.0,15.0"		// 6 values
 #define NERF_TIMES			"60.0,25.0,50.0"					// 3 values
 // Because L4D has less special infected and box options
-#define POS_WEIGHTS_1		"35,100,30,60,10,45,65,5,5,5,5,5,5,5,10"			// 15 values
-#define NEG_WEIGHTS_1		"100,60,100,50,20,15,40,15,50,60,15,25,40,85,15"	// 15 values
 #define SI_CHANCES_1		"8.0,8.0,8.0"
-
 
 // I Only use jockey and tank for spawns, but I will preserve it, just in case
 // #define ZC_SMOKER			1
@@ -209,6 +206,11 @@ static char g_sMeleeList[][] = { "fireaxe", "golfclub", "machete", "katana", "ba
 // 3 different vectors with a separation of 120 degrees, aproximated and hardcoded to prevent making useless calculations
 // Z-axis ommited because is generated in the spitter function
 static float g_fTriSpitForces[3][2] = { { 150.0, 0.0}, { -75.0, 129.9 }, { -75.0, -129.9 } };
+// Lootbox event names
+static char g_sPositives[][] = { "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "thanos", "respawn" };
+static char g_sNegatives[][] = { "mob", "panic", "vomittrap", "witch", "tank", "toxiccloud", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "randangle", "fullteam", "titans" };
+static char g_sPositives_2[][] = { "tier1", "tier2", "tier3", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "thanos", "respawn" };
+static char g_sNegatives_2[][] = { "mob", "panic", "vomittrap", "spittrap", "witch", "tank", "toxiccloud", "jockey", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "beartrap", "fireworks", "fullteam", "titans" };
 
 // Plugin Start ConVars and variables
 ConVar g_hAllow;
@@ -222,6 +224,7 @@ int g_iLootBoxEnt[MAX_LBOXES];
 int g_iToxCloudEnt[MAX_TOXCLOUD];
 int g_iWeaponEnt[MAX_WEAPONS];
 int g_iToxCloudCounter[MAX_TOXCLOUD];
+
 // Entity timers
 Handle g_hLootBoxTimer[MAX_LBOXES];
 Handle g_hToxCloudTimer[MAX_TOXCLOUD];
@@ -240,8 +243,6 @@ int g_iWitchDrops[2];
 // Plugin ConVars
 ConVar g_hBoxLifeTime;
 ConVar g_hPosProb;
-ConVar g_hPosWeight;
-ConVar g_hNegRes;
 ConVar g_hBoostTimes;
 ConVar g_hNerfTimes;
 ConVar g_hSpecialDrops;
@@ -257,6 +258,7 @@ ConVar g_hToxicHits;
 ConVar g_hBleedHits;
 ConVar g_hFreezeTime;
 ConVar g_hFragilityMult;
+ConVar g_hConfigFile;
 
 // Player variables & handles
 bool g_bPlayerAdvert[MAXPLAYERS + 1];
@@ -308,22 +310,19 @@ public void OnPluginStart()
 	
 	g_hAllow =			CreateConVar("l4d_lootbox_enable",					"1",				"1 = Plugin On. 0 = Plugin Off.", FCVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hGameModes =		CreateConVar("l4d_lootbox_gamemodes",				"",					"Enable plugin in these gamemodes, separated by commas, no spaces.\nEmpty to allow all.", FCVAR_FLAGS);
+	g_hConfigFile = 	CreateConVar("l4d_lootbox_weightsfile",			DEFAULT_CFG,			"Name of the weights config file to load", FCVAR_FLAGS);
 
 	g_hBoxLifeTime =	CreateConVar("l4d_lootbox_lifetime",				"30.0",				"Lifetime of the Loot Boxes in seconds.", FCVAR_FLAGS, true, 10.0, true, 60.0);
 	g_hPosProb =		CreateConVar("l4d_lootbox_positive_chance",			"50.0",				"Chance in % to have a good Loot Box opening.", FCVAR_FLAGS, true, 0.0, true, 100.0);
 
 	g_hBoostTimes =		CreateConVar("l4d_lootbox_boost_durations",			BOOST_TIMES,		"Duration of good Box boosts in seconds.\n6 values, separated by commas, no spaces.\n<Speed,Invulnerability,Regeneration,FireDamage,InfiniteAmmo,ExplosiveShots>.", FCVAR_FLAGS);
-	g_hNerfTimes =		CreateConVar("l4d_lootbox_nerf_durations",			NERF_TIMES,			"Duration of bad Box nerfs in seconds.\n13| values, separated by commmas, no spaces.\n<ReverseControls,Fragility,RandomAngles>\nIf one value is placed, it will be set for all the durations.", FCVAR_FLAGS);
+	g_hNerfTimes =		CreateConVar("l4d_lootbox_nerf_durations",			NERF_TIMES,			"Duration of bad Box nerfs in seconds.\n13 values, separated by commmas, no spaces.\n<ReverseControls,Fragility,RandomAngles>\nIf one value is placed, it will be set for all the durations.", FCVAR_FLAGS);
 	if( g_bL4D2 )
 	{
-		g_hPosWeight =		CreateConVar("l4d_lootbox_positive_weights",		POS_WEIGHTS,		"Weight of good Loot Box results.\n17 values, separated by commas, no spaces.\n<T1,T2,T3,Secondary,Drugs,Medical,Throwables,Items,Ammoupgrade,LaserBox,Speed,Invulnerability,Regeneration,Fire,InfiniteAmmo,ExplosiveShots,InfinityGaunlet>", FCVAR_FLAGS);
-		g_hNegRes =			CreateConVar("l4d_lootbox_negative_weights",		NEG_WEIGHTS,		"Weight of bad Loot Box results.\n17 values, separated by commas, no spaces.\n<Mob,Panic,VomitTrap,SpitTrap,Witch,Tank,ToxicCloud,JockeyRide,Barrel,BlackAndWhite,FreezeTrap,ReverseControls,Fragility,BearTrap,RandomAngles,FireWorks,FullSITeam>", FCVAR_FLAGS);
 		g_hSpecialDrops =	CreateConVar("l4d_lootbox_special_drop_chance",		SI_CHANCES,			"Chance to drop a LootBox when a Special infected dies.\n1|6 values, separated by commas, no spaces, values from 0.0 to 100.0\nOrder:<smoker,boomer,hunter,spitter,jockey,charger>\nIf one value is placed, it will be set for all SI.", FCVAR_FLAGS);	
 	}
 	else
 	{
-		g_hPosWeight =		CreateConVar("l4d_lootbox_positive_weights",		POS_WEIGHTS_1,		"Weight of good Loot Box results.\n14 values, separated by commas, no spaces.\n<T1,T2,Secondary,Drugs,Medical,Throwables,Items,Speed,Invulnerability,Regeneration,Fire,InfiniteAmmo,ExplosiveShots,InfinityGaunlet>", FCVAR_FLAGS);
-		g_hNegRes =			CreateConVar("l4d_lootbox_negative_weights",		NEG_WEIGHTS_1,		"Weight of bad Loot Box results.\n14 values, separated by commas, no spaces.\n<Mob,Panic,VomitTrap,Witch,Tank,ToxicCloud,Barrel,BlackAndWhite,FreezeTrap,ReverseControls,Fragility,BearTrap,RandomAngles,FullSITeam>", FCVAR_FLAGS);
 		g_hSpecialDrops =	CreateConVar("l4d_lootbox_special_drop_chance",		SI_CHANCES_1,		"Chance to drop a LootBox when a Special infected dies.\n1|3 values, separated by commas, no spaces, values from 0.0 to 100.0\nOrder:<smoker,boomer,hunter>\nIf one value is placed, it will be set for all SI.", FCVAR_FLAGS);
 	}
 	g_hTankDrops =		CreateConVar("l4d_lootbox_tank_drops",				"1,3",				"Min and max amount of lootboxes dropped when a tank dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
@@ -346,8 +345,6 @@ public void OnPluginStart()
 	g_hAllow.AddChangeHook(CvarChange_Enable);
 	g_hGameModes.AddChangeHook(CvarChange_Enable);
 	g_hCurrGamemode.AddChangeHook(CvarChange_Enable);
-	g_hPosWeight.AddChangeHook(CVarChange_Probs);
-	g_hNegRes.AddChangeHook(CVarChange_Probs);
 	g_hSpecialDrops.AddChangeHook(CVarChange_Drops);
 	g_hTankDrops.AddChangeHook(CVarChange_Drops);
 	g_hBoostTimes.AddChangeHook(CVarChange_Times);
@@ -422,7 +419,7 @@ public void OnConfigsExecuted()
 {
 	GetGameMode();
 	SwitchPlugin();
-	GetProbs();
+	LoadWeights();
 	GetDrops();
 	GetBoostTimes();
 }
@@ -440,8 +437,11 @@ public void OnClientPutInServer(int client)
 
 public void OnClientDisconnect(int client)
 {
-	if( g_bPluginOn )		
+	if( g_bPluginOn )
+	{		
 		SDKUnhook(client, SDKHook_OnTakeDamage, IgnoreExplosions_Callback);
+		ResetClientData(client);
+	}
 }
 
 public void OnMapEnd()
@@ -474,9 +474,9 @@ public void CvarChange_Enable(Handle conVar, const char[] oldValue, const char[]
 	SwitchPlugin();
 }
 
-public void CVarChange_Probs(Handle conVar, const char[] oldValue, const char[] newValue)
+public void CVarChange_Weights(Handle conVar, const char[] oldValue, const char[] newValue)
 {
-	GetProbs();
+	LoadWeights();
 }
 
 public void CVarChange_Drops(Handle conVar, const char[] oldValue, const char[] newValue)
@@ -560,47 +560,12 @@ void SwitchPlugin()
 	}
 }
 
-void GetProbs()
+void LoadWeights()
 {
-	char sConVar[256];
-	char sBuffer[20][8];
-	g_iPosWeightSum = 0;
-	g_iNegWeightSum = 0;
-	int iArrSize;
-	int iPosSize = g_bL4D2 ? POS_SIZE : POS_SIZE_1;
-	int iNegSize = g_bL4D2 ? NEG_SIZE: NEG_SIZE_1;
-
-	g_hPosWeight.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iPosSize )
-	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_positive_weights> value amount. Expected %d, found %d", iPosSize, iArrSize);
-		ExplodeString(POS_WEIGHTS, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
-		g_hPosWeight.RestoreDefault(false, false);
-	}
-			
-	for( int i = 0; i < iPosSize; i++ )
-	{
-		g_iPosWeights[i] = StringToInt(sBuffer[i]);
-		if( g_iPosWeights[i] < 0 ) g_iPosWeights[i] = 0;
-
-		g_iPosWeightSum += g_iPosWeights[i];
-	}
-	
-	g_hNegRes.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iNegSize )
-	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_negative_weights> value amount. Expected %d, found %d", iNegSize, iArrSize);
-		ExplodeString(NEG_WEIGHTS, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
-		g_hNegRes.RestoreDefault(false, false);
-	}
-			
-	for( int i = 0; i < iNegSize; i++ )
-	{
-		g_iNegWeights[i] = StringToInt(sBuffer[i]);
-		if( g_iNegWeights[i] < 0 ) g_iNegWeights[i] = 0;
-			
-		g_iNegWeightSum += g_iNegWeights[i];
-	}
+	char sFileName[32];
+	g_hConfigFile.GetString(sFileName, sizeof(sFileName));
+	if( !ReadCfgFile(sFileName) )
+		SetFailState("Error loading weights config file.");
 }
 
 void GetDrops()
@@ -613,7 +578,7 @@ void GetDrops()
 	g_hSpecialDrops.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != iSpecials && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_special_drop_chance> value amount. Expected %d|1, found %d", iSpecials, iArrSize);
+		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_special_drop_chance> value amount. Expected %d|1, found %d", SERVER_TAG, iSpecials, iArrSize);
 		ExplodeString(SI_CHANCES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hSpecialDrops.RestoreDefault(false, false);
 	}
@@ -630,7 +595,7 @@ void GetDrops()
 	g_hTankDrops.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 2 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_tank_drops> value amount. Expected 2|1, found %d", iArrSize);
+		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_tank_drops> value amount. Expected 2|1, found %d", SERVER_TAG, iArrSize);
 		g_iTankDrops = { 1, 3 };
 		g_hTankDrops.RestoreDefault(false, false);	
 	}
@@ -653,7 +618,7 @@ void GetDrops()
 	g_hWitchDrops.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 2 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_witch_drops> value amount. Expected 2|1, found %d", iArrSize);
+		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_witch_drops> value amount. Expected 2|1, found %d", SERVER_TAG, iArrSize);
 		g_iWitchDrops = { 1, 2 };
 		g_hWitchDrops.RestoreDefault(false, false);	
 	}
@@ -683,7 +648,7 @@ void GetBoostTimes()
 	g_hBoostTimes.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 6 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 6|1, found %d", iArrSize);
+		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 6|1, found %d", SERVER_TAG, iArrSize);
 		ExplodeString(BOOST_TIMES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hBoostTimes.RestoreDefault(false, false);
 	}
@@ -696,13 +661,144 @@ void GetBoostTimes()
 	g_hNerfTimes.GetString(sConVar, sizeof(sConVar));
 	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 3 && iArrSize != 1 )
 	{
-		PrintToServer("[LB] Warning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 2|1, found %d", iArrSize);
+		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 2|1, found %d", SERVER_TAG, iArrSize);
 		ExplodeString(NERF_TIMES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
 		g_hNerfTimes.RestoreDefault(false, false);
 	}
 	g_fNerfTimes[0] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[0]);
 	g_fNerfTimes[1] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[1]);
 	g_fNerfTimes[2] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[2]);
+}
+
+/* ========================================================================================= *
+ *                                       FileReader                                          *
+ * ========================================================================================= */
+
+bool ReadCfgFile(const char[] fileName)
+{
+	g_iPosWeightSum = 0;
+	g_iNegWeightSum = 0;
+
+	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, sizeof(sPath), fileName);
+	bool bDefault = ( strncmp(fileName, DEFAULT_CFG, 26) == 0 ) ? true : false; // Check if is the default file
+	
+	if( !FileExists(sPath) )	// Throw warning/error if file doesn't exist.
+	{
+		if( !bDefault )
+		{
+			PrintToServer("%sWarning: Missing config file \"%s\", attempting default file.", SERVER_TAG, fileName);
+			return ReadCfgFile(DEFAULT_CFG);	// Attempt to read default file
+		}
+		PrintToServer("%sError: Missing default config file, plugin disabled.", SERVER_TAG);
+		return false;	// Crash plugin
+	}
+
+	KeyValues hKV = new KeyValues("weights");
+	if( !hKV.ImportFromFile(sPath) )	// Throw warning/error if file can't be opened
+	{
+		if( !bDefault )
+		{
+			PrintToServer("%sWarning: Can't read \"%s\", attempting default file.", SERVER_TAG, fileName);
+			delete hKV;
+			return ReadCfgFile(DEFAULT_CFG);		
+		}
+		PrintToServer("%sError: Can't read default config file, plugin disabled.", SERVER_TAG);
+		delete hKV;
+		return false;	
+	}
+
+	char sMainKey[12];
+	sMainKey = g_bL4D2 ? "Left4Dead2" : "Left4Dead";
+	if( !AttemptKeyJump(hKV, sMainKey, fileName, bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+	}
+	if( g_bL4D2 )
+	{
+		if( !AttemptKeyJump(hKV, "positives", fileName, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+
+		if( !ParseValues(hKV, g_sPositives_2, sizeof(g_sPositives_2), fileName, g_iPosWeights, g_iPosWeightSum, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+		hKV.GoBack();
+		if( !AttemptKeyJump(hKV, "negatives", fileName, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+
+		if( !ParseValues(hKV, g_sNegatives_2, sizeof(g_sNegatives_2), fileName, g_iNegWeights, g_iNegWeightSum, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+	}
+	else
+	{
+		if( !AttemptKeyJump(hKV, "positives", fileName, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+
+		if( !ParseValues(hKV, g_sPositives, sizeof(g_sPositives), fileName, g_iPosWeights, g_iPosWeightSum, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+		hKV.GoBack();
+		if( !AttemptKeyJump(hKV, "negatives", fileName, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+
+		if( !ParseValues(hKV, g_sNegatives, sizeof(g_sNegatives), fileName, g_iNegWeights, g_iNegWeightSum, bDefault) )
+		{
+			delete hKV;
+			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		}
+	}
+	delete hKV;
+	return true;
+}
+
+bool AttemptKeyJump(KeyValues kv, const char[] keyName, const char[] fileName, bool isDefault )
+{
+	if( !kv.JumpToKey(keyName) )
+	{
+		if( !isDefault )
+		{
+			PrintToServer("%sWarning: Missing or corrupt key \"%s\" in \"%s\". Attempting default file.", SERVER_TAG, keyName, fileName);
+			return false;
+		}
+		PrintToServer("%sError: Missing or corrupt key \"%s\", plugin disabled.", SERVER_TAG, keyName);
+		return false;		
+	}
+	return true;
+}
+
+bool ParseValues(KeyValues kv, const char[][] keyNames, int length, const char[] fileName, int[] destArray, int &sumatory, bool isDefault)
+{
+	sumatory = 0;
+	for( int i = 0; i < length; i++ )
+	{
+		if( !AttemptKeyJump(kv, keyNames[i], fileName, isDefault) )
+			return false;
+
+		destArray[i] = kv.GetNum(NULL_STRING);
+		sumatory += destArray[i];
+		kv.GoBack();
+	}
+	return true;
 }
 
 /* ========================================================================================= *
@@ -1486,7 +1582,7 @@ bool SpawnLootBox(float origin[3], float angles[3], float force[3])
 		SDKHook(entity, SDKHook_Use, LootBox_Used);
 		return true;
 	}
-	PrintToServer("[LB] ERROR: LootBox Spawn failed.");
+	PrintToServer("%sERROR: LootBox Spawn failed.", SERVER_TAG);
 	return false;
 }
 
@@ -2657,6 +2753,12 @@ void MakeTitanZombies(int client)
 		// Scale size
 		SetEntPropFloat(zombie, Prop_Send,"m_flModelScale", 3.0); 
 	}
+	for( int i = 1; i <= MaxClients; i++ )
+	{
+		if( IsClientInGame(i) && i != client && !IsFakeClient(i) )
+			PrintToChat(i, "%s %x03%N%x01 has found a \x03full titan zombies\x01.", CHAT_TAG, client);
+	}
+	PrintToChat(client, "%s You have found a \x03titan zombies\x01.", CHAT_TAG);
 }
 /* ========================================================================================= *
  *                                     Weapon Handling                                       *
@@ -2762,7 +2864,7 @@ int WeaponSpawn(const char[] className, const char[] weaponType = "none")
 	}
 	else
 	{
-		PrintToServer("[LB] Warning: Failed to spawn %s.", className);
+		PrintToServer("%sWarning: Failed to spawn %s.", SERVER_TAG, className);
 		return -1;
 	}
 	
