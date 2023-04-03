@@ -1287,7 +1287,7 @@ Action PlayerRegen_Timer(Handle timer, int client)
 	{
 		SetEntityHealth(client, (GetClientHealth(client)) + 2);
 		SetEntProp(client, Prop_Send, "m_currentReviveCount", 0);
-		SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", 0);
+		if( g_bL4D2 ) SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", 0);
 	}
 	else
 		SetEntityHealth(client, 100);
@@ -2629,7 +2629,7 @@ void BlackWhite(int client)
 	ConVar hIncapLimit = FindConVar("survivor_max_incapacitated_count"); // Max amount of incapacitations before killing a player
 	int num = hIncapLimit.IntValue;
 	SetEntProp(client, Prop_Send, "m_currentReviveCount", num);
-	SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", 1);
+	if( g_bL4D2 ) SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", 1);
 	
 	PrintToChat(client, "%s You have obtained \x03black and white\x01.", CHAT_TAG);
 } 
@@ -3012,6 +3012,10 @@ void ResetClientData(int client)
 /*============================================================================================
                                           Changelog
 ----------------------------------------------------------------------------------------------
+* 1.2   (04-Mar-2022)
+		- Lootbox event weights moved to a config file instead of storing in ConVars.
+		- Fixed errors with timer handles when player disconnects.
+		- Fixed black and white code errors on Left 4 Dead.
 * 1.1	(16-Jun-2021)
 		- Merged Left 4 Dead and Left 4 Dead 2 plugin files.
 		- Fixed error with Toxic Cloud that limited the amount of clouds per round to 8.

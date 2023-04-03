@@ -3,3 +3,6 @@
 
 #ignore .vscode
 /.vscode
+
+#ignore compiled file
+/plugins
