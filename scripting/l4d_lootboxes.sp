@@ -3013,7 +3013,7 @@ void ResetClientData(int client)
 /*============================================================================================
                                           Changelog
 ----------------------------------------------------------------------------------------------
-* 1.2   (04-Apr-2023)
+* 1.2   (03-Apr-2023)
 		- Fixed code for SM 1.11.
 		- Lootbox event weights moved to a config file instead of storing in ConVars.
 		- Added new events: "Titan zombies" and "Survivor resurrection".
