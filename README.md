@@ -45,3 +45,12 @@ Tanks and witches can drop multiple lootboxes.
 - **Fireword party:** Multiple fireworks will spawn and explode (L4D2 only).
 - **Full SI team:** Each different Special Infected will spawn at the same time.
 - **Titan zombies:** Common infected size and health will increase.
+
+## Requirements
+- [Left 4 DHooks Direct](https://forums.alliedmods.net/showthread.php?t=321696)
+- [Survivor utilities](https://forums.alliedmods.net/showthread.php?t=335683)
+- [Explosive Shots](https://forums.alliedmods.net/showthread.php?t=342301)
+
+## Installation
+- Put **l4d_lootboxes.smx** in your *sourcemod/plugins* folder.
+- Put **lootboxes_weights.cfg** in your *sourcemod/data* folder.
