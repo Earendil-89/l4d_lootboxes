@@ -207,10 +207,10 @@ static char g_sMeleeList[][] = { "fireaxe", "golfclub", "machete", "katana", "ba
 // Z-axis ommited because is generated in the spitter function
 static float g_fTriSpitForces[3][2] = { { 150.0, 0.0}, { -75.0, 129.9 }, { -75.0, -129.9 } };
 // Lootbox event names
-static char g_sPositives[][] = { "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "thanos", "respawn" };
+static char g_sPositives[][] = { "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "infgauntlet", "respawn" };
 static char g_sNegatives[][] = { "mob", "panic", "vomittrap", "witch", "tank", "toxiccloud", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "randangle", "fullteam", "titans" };
-static char g_sPositives_2[][] = { "tier1", "tier2", "tier3", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "thanos", "respawn" };
-static char g_sNegatives_2[][] = { "mob", "panic", "vomittrap", "spittrap", "witch", "tank", "toxiccloud", "jockey", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "beartrap", "fireworks", "fullteam", "titans" };
+static char g_sPositives_2[][] = { "tier1", "tier2", "tier3", "secondary", "drugs", "medical", "throwables", "items", "upgrade", "laser", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
+static char g_sNegatives_2[][] = { "mob", "panic", "vomittrap", "spittrap", "witch", "tank", "toxiccloud", "jockey", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "beartrap", "randangle", "fireworks", "fullteam", "titans" };
 
 // Plugin Start ConVars and variables
 ConVar g_hAllow;
@@ -1671,7 +1671,7 @@ bool OpenPos(float vPos[3], int client)
 	{
 		abs += g_iPosWeights[i];
 		if( abs >= iRnd )
-		{
+		{	
 			choice = i;
 			break;
 		}
@@ -2756,7 +2756,7 @@ void MakeTitanZombies(int client)
 	for( int i = 1; i <= MaxClients; i++ )
 	{
 		if( IsClientInGame(i) && i != client && !IsFakeClient(i) )
-			PrintToChat(i, "%s %x03%N%x01 has found a \x03full titan zombies\x01.", CHAT_TAG, client);
+			PrintToChat(i, "%s \x03%N\x01 has found a \x03full titan zombies\x01.", CHAT_TAG, client);
 	}
 	PrintToChat(client, "%s You have found a \x03titan zombies\x01.", CHAT_TAG);
 }
@@ -3012,11 +3012,21 @@ void ResetClientData(int client)
 /*============================================================================================
                                           Changelog
 ----------------------------------------------------------------------------------------------
-* 1.2   (04-Mar-2022)
+* 1.2   (04-Apr-2023)
+		- Fixed code for SM 1.11.
 		- Lootbox event weights moved to a config file instead of storing in ConVars.
+		- Added new events: "Titan zombies" and "Survivor resurrection".
+		- Fixed bug on "Fragility" event where effect never ended.
+		- Fixed bugs in plugin messages.
+		- Fixed plugin errors on tank death.
 		- Fixed errors with timer handles when player disconnects.
 		- Fixed black and white code errors on Left 4 Dead.
-* 1.1	(16-Jun-2021)
+* 1.1.1  (17-Jun-2022)
+		- Fixed errors in message prints.
+		- Fixed a bug in reverse controls where player couldn't use other buttons apart of movement buttons.
+		- Fixed array index out of bounds for player death event.
+		- Modified default special drop chances.
+* 1.1	(16-Jun-2022)
 		- Merged Left 4 Dead and Left 4 Dead 2 plugin files.
 		- Fixed error with Toxic Cloud that limited the amount of clouds per round to 8.
 		- Fixed error where infinite ammo boost was not working properly.
