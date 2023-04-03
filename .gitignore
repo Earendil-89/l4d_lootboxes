@@ -1,0 +1,8 @@
+#ignore workflows
+/.github/workflows
+
+#ignore .vscode
+/.vscode
+
+#ignore compiled file
+/plugins
