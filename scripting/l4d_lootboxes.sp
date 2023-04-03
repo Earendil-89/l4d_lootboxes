@@ -207,7 +207,7 @@ static char g_sMeleeList[][] = { "fireaxe", "golfclub", "machete", "katana", "ba
 // Z-axis ommited because is generated in the spitter function
 static float g_fTriSpitForces[3][2] = { { 150.0, 0.0}, { -75.0, 129.9 }, { -75.0, -129.9 } };
 // Lootbox event names
-static char g_sPositives[][] = { "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "infgauntlet", "respawn" };
+static char g_sPositives[][] = { "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
 static char g_sNegatives[][] = { "mob", "panic", "vomittrap", "witch", "tank", "toxiccloud", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "randangle", "fullteam", "titans" };
 static char g_sPositives_2[][] = { "tier1", "tier2", "tier3", "secondary", "drugs", "medical", "throwables", "items", "upgrade", "laser", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
 static char g_sNegatives_2[][] = { "mob", "panic", "vomittrap", "spittrap", "witch", "tank", "toxiccloud", "jockey", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "beartrap", "randangle", "fireworks", "fullteam", "titans" };
@@ -789,7 +789,8 @@ bool AttemptKeyJump(KeyValues kv, const char[] keyName, const char[] fileName, b
 bool ParseValues(KeyValues kv, const char[][] keyNames, int length, const char[] fileName, int[] destArray, int &sumatory, bool isDefault)
 {
 	sumatory = 0;
-	for( int i = 0; i < length; i++ )
+	int i;
+	for( i = 0; i < length; i++ )
 	{
 		if( !AttemptKeyJump(kv, keyNames[i], fileName, isDefault) )
 			return false;
