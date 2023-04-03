@@ -44,3 +44,4 @@ Tanks and witches can drop multiple lootboxes.
 - **Random angles:** Survivor view angles will be randomized over time.
 - **Fireword party:** Multiple fireworks will spawn and explode (L4D2 only).
 - **Full SI team:** Each different Special Infected will spawn at the same time.
+- **Titan zombies:** Common infected size and health will increase.
