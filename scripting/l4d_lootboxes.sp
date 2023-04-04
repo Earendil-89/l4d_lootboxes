@@ -33,7 +33,7 @@
 #include <survivorutilities>
 #include <weaponhandling>
 
-#define PLUGIN_VERSION		"1.2-SNAPSHOT"
+#define PLUGIN_VERSION		"1.2"
 #define FCVAR_FLAGS			FCVAR_NOTIFY
 // Limit entities to prevent server crashes due to entity limit
 #define MAX_LBOXES			64
