@@ -8,7 +8,7 @@
  *  Link        :   https://forums.alliedmods.net/showthread.php?p=2781646#post2781646      *
  * ======================================================================================== *
  *                                                                                          *
- *  CopyRight (C) 2022 Eduardo "Eärendil" Chueca                                            *
+ *  CopyRight (C) 2023 Eduardo "Eärendil" Chueca                                            *
  * ---------------------------------------------------------------------------------------- *
  *  This program is free software; you can redistribute it and/or modify it under the       *
  *  terms of the GNU General Public License, version 3.0, as published by the Free          *
@@ -2999,10 +2999,12 @@ void ResetClientData(int client)
 * 1.3   (18-Apr-2023)
 	- Added ammo crate good event.
 	- Added more box sound effects.
+	- Added new config file.
 	- Fixed explosive shots not using external plugin and causing bugs.
 	- Fixed Infinity Gauntlet not kiling/hurting special infected or tanks.
 	- Fixed bug in reversed controls beign unable to do anything apart of moving.
 	- Fixed bugs in notification endings.
+	- Removed ConVars.
 * 1.2   (03-Apr-2023)
 	- Fixed code for SM 1.11.
 	- Lootbox event weights moved to a config file instead of storing in ConVars.
