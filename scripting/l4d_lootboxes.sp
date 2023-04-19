@@ -32,6 +32,7 @@
 #include <left4dhooks>
 #include <survivorutilities>
 #include <weaponhandling>
+#include <l4d_explosiveshots>
 
 #define PLUGIN_VERSION		"1.2"
 #define FCVAR_FLAGS			FCVAR_NOTIFY
@@ -62,6 +63,9 @@
 #define SND_BOOMER_EXPL		"player/boomer/explode/explo_medium_09.wav"
 #define SND_GOOD_OPEN		"level/gnomeftw.wav"
 #define SND_BAD_OPEN		"ui/pickup_scifi37.wav"
+#define SND_MOB				"ui/pickup_guitarriff10.wav"
+#define SND_PANIC			"ui/critical_event_1.wav"
+#define SND_BOSS			"ui/pickup_secret01.wav"
 #define SND_BOOST_START		"ui/survival_playerrec.wav"
 #define SND_BOOST_END		"ui/beep22.wav"
 #define SND_REGEN			"player/heartbeatloop.wav"
@@ -70,12 +74,9 @@
 #define SND_CHOKE			"player/survivor/voice/choke_5.wav"
 #define SND_DENY			"player/suit_denydevice.wav"
 #define SND_SHIELD			"ui/gascan_spawn.wav"
-#define SND_EXPL1			"weapons/flaregun/gunfire/flaregun_explode_1.wav"
-#define SND_EXPL2			"weapons/flaregun/gunfire/flaregun_fire_1.wav"
-#define SND_EXPL3			"animation/plane_engine_explode.wav"
 #define SND_BEARTRAP		"weapons/machete/machete_impact_flesh1.wav"
 // Just some sounds for Left 4 Dead, because this game is missing some sounds
-#define SND_GOOD_OPEN_1		"ui/bigreward.wav"
+#define SND_GOOD_OPEN_1		"ui/pickup/misc42.wav"
 #define SND_BOOST_START_1	"ui/holdout_playerrec.wav"
 #define SND_FIRE_1			"music/zombat/horde_01.wav"
 #define SND_THANOS_1		"ui/holdout_medal.wav"
@@ -102,6 +103,7 @@
 
 enum 
 {
+	POS_AMMO,
 	POS_T1,
 	POS_T2,
 	POS_T3,
@@ -148,6 +150,7 @@ enum
 //	L4D box opens
 enum
 {
+	POS_AMMO_1,
 	POS_T1_1,
 	POS_T2_1,
 	POS_SECNDARY_1,
@@ -207,9 +210,9 @@ static char g_sMeleeList[][] = { "fireaxe", "golfclub", "machete", "katana", "ba
 // Z-axis ommited because is generated in the spitter function
 static float g_fTriSpitForces[3][2] = { { 150.0, 0.0}, { -75.0, 129.9 }, { -75.0, -129.9 } };
 // Lootbox event names
-static char g_sPositives[][] = { "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
+static char g_sPositives[][] = { "ammo", "tier1", "tier2", "secondary", "drugs", "medical", "throwables", "items", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
 static char g_sNegatives[][] = { "mob", "panic", "vomittrap", "witch", "tank", "toxiccloud", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "randangle", "fullteam", "titans" };
-static char g_sPositives_2[][] = { "tier1", "tier2", "tier3", "secondary", "drugs", "medical", "throwables", "items", "upgrade", "laser", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
+static char g_sPositives_2[][] = { "ammo", "tier1", "tier2", "tier3", "secondary", "drugs", "medical", "throwables", "items", "upgrade", "laser", "speedbost", "invulnerability", "regeneration", "firepower", "infiniteammo", "explosiveshots", "infgauntlet", "respawn" };
 static char g_sNegatives_2[][] = { "mob", "panic", "vomittrap", "spittrap", "witch", "tank", "toxiccloud", "jockey", "explbarrel", "blackwhite", "freezetrap", "reversed", "fragility", "beartrap", "randangle", "fireworks", "fullteam", "titans" };
 
 // Plugin Start ConVars and variables
@@ -262,7 +265,6 @@ ConVar g_hConfigFile;
 
 // Player variables & handles
 bool g_bPlayerAdvert[MAXPLAYERS + 1];
-bool g_bPlayerExpl[MAXPLAYERS + 1];
 float g_fPlayerUse[MAXPLAYERS + 1];
 float g_fPlayerAngleTime[MAXPLAYERS + 1];
 int g_iPlayerBoosts[MAXPLAYERS + 1];
@@ -375,6 +377,9 @@ public void OnMapStart()
 	PrecacheSound(SND_REGEN, false);
 	PrecacheSound(SND_BOOST_END, false);
 	PrecacheSound(SND_DENY, false);
+	PrecacheSound(SND_MOB, false);
+	PrecacheSound(SND_PANIC, false);
+	PrecacheSound(SND_BOSS, false);
 		
 	if( g_bL4D2 )
 	{
@@ -384,9 +389,6 @@ public void OnMapStart()
 		PrecacheSound(SND_THANOS, false);
 		PrecacheSound(SND_SHIELD, false);
 		PrecacheSound(SND_BEARTRAP, false);
-		PrecacheSound(SND_EXPL1, false);
-		PrecacheSound(SND_EXPL2, false);
-		PrecacheSound(SND_EXPL3, false);
 	}
 	else
 	{
@@ -530,7 +532,6 @@ void SwitchPlugin()
 		HookEvent("player_death",			Event_Player_Death);
 		HookEvent("infected_hurt",			Event_Infected_Hurt);
 		HookEvent("player_hurt",			Event_Player_Hurt);
-		HookEvent("bullet_impact",			Event_Bullet_Impact);
 		if( g_bL4D2 )
 			HookEvent("weapon_fire",		Event_Weapon_Fire);
 		else
@@ -546,7 +547,6 @@ void SwitchPlugin()
 		UnhookEvent("player_death",				Event_Player_Death);
 		UnhookEvent("infected_hurt",			Event_Infected_Hurt);
 		UnhookEvent("player_hurt",				Event_Player_Hurt);
-		UnhookEvent("bullet_impact",			Event_Bullet_Impact);
 		if( g_bL4D2 )
 			UnhookEvent("weapon_fire",			Event_Weapon_Fire);
 		else
@@ -1028,48 +1028,6 @@ Action Event_Player_Hurt(Event event, const char[] name, bool dontBroadcast)
 	return Plugin_Continue;
 }
 
-Action Event_Bullet_Impact(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(GetEventInt(event, "userid"));	// Get the player who shooted
-	if( g_iPlayerBoosts[client] & PB_EXPL && !g_bPlayerExpl[client] )
-	{
-		float vPos[3];
-		vPos[0] = GetEventFloat(event, "x");
-		vPos[1] = GetEventFloat(event, "y");
-		vPos[2] = GetEventFloat(event, "z");
-		
-		// Create an env_explosion
-		int entity = CreateEntityByName("env_explosion");
-		TeleportEntity(entity, vPos, NULL_VECTOR, NULL_VECTOR);
-		DispatchKeyValue(entity, "iMagnitude", "100");
-		DispatchKeyValue(entity, "rendermode", "5");
-		DispatchKeyValue(entity, "spawnflags", "128");	// Random orientation
-		DispatchKeyValue(entity, "fireballsprite", "sprites/zerogxplode.spr");
-		SetEntPropEnt(entity, Prop_Data, "m_hInflictor", client);	// Make the player who created the env_explosion the owner of it
-		SetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity", client);
-		
-		DispatchSpawn(entity);
-		
-		SetVariantString("OnUser1 !self:Explode::0.01:1)");	// Add a delay to allow explosion effect to be visible
-		AcceptEntityInput(entity, "Addoutput");
-		AcceptEntityInput(entity, "FireUser1");
-		// env_explosion is autodeleted after 0.3s while spawnflag repeteable is not added
-		g_bPlayerExpl[client] = true;
-		CreateTimer(0.2, EnableExpl_Timer, client);
-		// Play an explosion sound
-		if( !g_bL4D2 )
-			return Plugin_Continue;
-			
-		switch (GetRandomInt(1,3))
-		{
-			case 1: EmitAmbientSound(SND_EXPL1, vPos);
-			case 2: EmitAmbientSound(SND_EXPL2, vPos);
-			case 3: EmitAmbientSound(SND_EXPL3, vPos);
-		}
-	}
-	return Plugin_Continue;
-}
-
 Action Invulnerability_Callback(int victim, int& attacker, int& inflictor, float& damage, int& damagetype)
 {
 	// Player, ignore damage
@@ -1086,7 +1044,9 @@ Action Invulnerability_Callback(int victim, int& attacker, int& inflictor, float
 		// Witch or infected, ignore damage
 		if( StrEqual(sClassname, "infected") || StrEqual(sClassname, "witch") )
 		{
-			EmitSoundToClient(victim, SND_SHIELD);
+	//	 EmitSoundToAll(g_sTracks[g_iPlaying], EntRefToEntIndex(g_iElevator), SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0 );
+
+			EmitSoundToClient(victim, SND_SHIELD, .level = SNDLEVEL_DISHWASHER);
 			return Plugin_Handled;
 		}
 	}
@@ -1123,7 +1083,7 @@ Action IgnoreExplosions_Callback(int victim, int &attacker, int &inflictor, floa
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
 {
 	if( g_iPlayerBoosts[client] & PN_REVERSE )
-	{
+	{	
 		if( buttons & IN_FORWARD )
 		{
 			buttons &= ~IN_FORWARD;
@@ -1131,7 +1091,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		}
 		if( buttons & IN_BACK )
 		{
-			buttons &= IN_BACK;
+			buttons &= ~IN_BACK;
 			buttons |= IN_FORWARD;
 		}
 		if( buttons & IN_LEFT )
@@ -1143,7 +1103,8 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		{
 			buttons &= ~IN_RIGHT;
 			buttons |= IN_LEFT;
-		}
+		}	
+
 		vel[0] = -vel[0];
 		vel[1] = -vel[1];
 //		vel[2] = -vel[2];
@@ -1266,7 +1227,7 @@ Action PlayerFire_Timer(Handle timer, int client)
 	if( entity != 0 && entity != INVALID_ENT_REFERENCE )
 		RemoveEntity(entity);
 		
-	PrintToChat(client, "%s \x03Invulnerability\x01 ended.", CHAT_TAG);
+	PrintToChat(client, "%s \x03Fire power\x01 ended.", CHAT_TAG);
 	return Plugin_Continue;
 }
 
@@ -1274,6 +1235,9 @@ Action PlayerInfAmmo_Timer(Handle timer, int client)
 {
 	g_hPlayerAmmoTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PB_IAMMO;
+
+	EmitSoundToClient(client, SND_BOOST_END);
+	PrintToChat(client, "%s\x03Infinite ammo\x01 ended.", CHAT_TAG);
 	return Plugin_Continue;
 }
 
@@ -1405,6 +1369,7 @@ Action PlayerExpl_Timer(Handle timer, int client)
 {
 	g_hPlayerExplTimer[client] = null;
 	g_iPlayerBoosts[client] &= ~PB_EXPL;
+	L4D_ExplosiveShots_Set(client, Mode_Auto);
 	if( !IsClientInGame(client) || !IsPlayerAlive(client) )
 		return Plugin_Continue;
 		
@@ -1457,12 +1422,6 @@ Action PlayerAngles_Timer(Handle timer, int client)
 		PrintToChat(client, "%s \x03Random orientation\x01 ended.", CHAT_TAG);
 		EmitSoundToClient(client, SND_BOOST_END);
 	}
-	return Plugin_Continue;
-}
-
-Action EnableExpl_Timer(Handle timer, int client)
-{
-	g_bPlayerExpl[client] = false;
 	return Plugin_Continue;
 }
 
@@ -1681,7 +1640,8 @@ bool OpenPos(float vPos[3], int client)
 	{
 		switch( choice )
 		{
-			case POS_T1: return SPawnT1(client, vPos);
+			case POS_AMMO: return SpawnAmmo(client, vPos);
+			case POS_T1: return SpawnT1(client, vPos);
 			case POS_T2: return SpawnT2(client, vPos);
 			case POS_T3: return SpawnT3(client, vPos);
 			case POS_DRUGS: return SpawnDrugs(client, vPos);
@@ -1696,7 +1656,7 @@ bool OpenPos(float vPos[3], int client)
 			case POS_REGEN: GivePlayerRegen(client);
 			case POS_FIRE: GivePlayerFire(client);
 			case POS_IAMMO: GivePlayerInfAmmo(client);
-			case POS_EXPL: GivePlayerExplosive(client);
+			case POS_EXPL: return GivePlayerExplosive(client);
 			case POS_THANOS: WipeHalfZombies(client);
 			case POS_RESPAWN: return RespawnClient(client, vPos);
 		}
@@ -1705,7 +1665,8 @@ bool OpenPos(float vPos[3], int client)
 	{
 		switch( choice )
 		{
-			case POS_T1_1: return SPawnT1(client, vPos);
+			case POS_AMMO_1: return SpawnAmmo(client, vPos);
+			case POS_T1_1: return SpawnT1(client, vPos);
 			case POS_T2_1: return SpawnT2(client, vPos);
 			case POS_DRUGS_1: return SpawnDrugs(client, vPos);
 			case POS_MEDS_1: return SpawnMeds(client, vPos);
@@ -1717,7 +1678,7 @@ bool OpenPos(float vPos[3], int client)
 			case POS_REGEN_1: GivePlayerRegen(client);
 			case POS_FIRE_1: GivePlayerFire(client);
 			case POS_IAMMO_1: GivePlayerInfAmmo(client);
-			case POS_EXPL_1: GivePlayerExplosive(client);
+			case POS_EXPL_1: return GivePlayerExplosive(client);
 			case POS_THANOS_1: WipeHalfZombies(client);
 			case POS_RESPAWN_1: return RespawnClient(client, vPos);
 		}
@@ -1894,7 +1855,17 @@ bool _TraceFilterIgnoreBoxes(int entity, int contentsMask)
  *                                Good Loot Box functions                                    *
  * ========================================================================================= */
 
-bool SPawnT1(int client, float vPos[3])
+bool SpawnAmmo(int client, float vPos[3])
+{
+	if( WeaponSpawn("weapon_ammo_spawn") == -1 )
+		return false;
+
+	PrintToChat(client, "%sYou have found \x03an ammo pile\x01.", CHAT_TAG);
+	EmitAmbientSound(SND_GOOD_OPEN, vPos);
+	return true;
+}
+
+bool SpawnT1(int client, float vPos[3])
 {
 	int iWeapon;
 	if( g_bL4D2 ) iWeapon = WeaponSpawn("weapon_spawn", "tier1_any");
@@ -2246,8 +2217,11 @@ void GivePlayerInfAmmo(int client)
 	PrintToChat(client, "%s You have obtained \x03infinite ammo\x01.", CHAT_TAG);
 }
 
-void GivePlayerExplosive(int client)
+bool GivePlayerExplosive(int client)
 {
+	if( L4D_ExplosiveShots_Get(client) != Mode_Auto )
+		return false;
+
 	if( CheckPlayerBoost(client, PB_EXPL) )
 	{
 		delete g_hPlayerExplTimer[client];
@@ -2258,8 +2232,11 @@ void GivePlayerExplosive(int client)
 	{
 		g_iPlayerBoosts[client] |= PB_EXPL;
 		g_hPlayerExplTimer[client] = CreateTimer(g_fBoostTimes[5], PlayerExpl_Timer, client);
+		L4D_ExplosiveShots_Set(client, Mode_Force);
 		PrintToChat(client, "%s You have obtained \x03explosive shots\x01.", CHAT_TAG);
 	}
+
+	return true;
 }
 
 void WipeHalfZombies(int client)
@@ -2289,7 +2266,7 @@ void WipeHalfZombies(int client)
 	}
 	for( int i = 1; i <= MaxClients; i++ )
 	{
-		if( IsClientInGame(i) && GetClientTeam(i) == 1 && IsPlayerAlive(i) )
+		if( IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) )
 		{
 			if( GetEntProp(client, Prop_Send, "m_zombieClass") == ZC_TANK )
 			{
@@ -2384,6 +2361,7 @@ void SpawnMob(int client, bool mega)
 		}
 		PrintToChat(client, "%s You have found a \x03panic event\x01.", CHAT_TAG);
 		g_iNextMobSize = g_hMegaMobSize.IntValue;
+		EmitSoundToAll(SND_PANIC, SOUND_FROM_PLAYER);
 	}
 	else
 	{
@@ -2393,6 +2371,7 @@ void SpawnMob(int client, bool mega)
 				PrintToChat(i, "%s \x03%N\x01 has found \x03some zombies\x01.", CHAT_TAG, client);
 		}
 		PrintToChat(client, "%s You have found \x03some zombies\x01.", CHAT_TAG);
+		EmitSoundToAll(SND_MOB, SOUND_FROM_PLAYER);
 	}
 	// Spawn a mob even on panic, because sometimes panic events may not be called
 	int iComFlags = GetCommandFlags("z_spawn_old");
@@ -2499,7 +2478,7 @@ bool SpawnWitch(int client, float vPos[3])
 	if( result < 0 )
 		return false;
 		
-	EmitAmbientSound(SND_BAD_OPEN, vPos);
+	EmitSoundToAll(SND_BOSS, SOUND_FROM_PLAYER);
 	for( int i = 1; i <= MaxClients; i++ )
 	{
 		if( IsClientInGame(i) && i != client && !IsFakeClient(i) )
@@ -2526,7 +2505,7 @@ bool SpawnTank(int client, float vPos[3])
 	if( result < 0 )
 		return false;
 	
-	EmitAmbientSound(SND_BAD_OPEN, vPos);
+	EmitSoundToAll(SND_BOSS, SOUND_FROM_PLAYER);
 	for( int i = 1; i <= MaxClients; i++ )
 	{
 		if( IsClientInGame(i) && i != client && !IsFakeClient(i) )
@@ -2568,7 +2547,7 @@ bool ToxicCloud(int client, float vPos[3])
 	}
 	else return false;
 	
-	EmitAmbientSound(SND_BAD_OPEN, vPos);
+	EmitSoundToAll(SND_BAD_OPEN);
 	for( int i = 1; i <= MaxClients; i++ )
 	{
 		if( IsClientInGame(i) && i != client && !IsFakeClient(i) )
@@ -2614,7 +2593,7 @@ bool SpawnExplBarrel(int client, float vPos[3])
 	}
 	else return false;
 	
-	EmitAmbientSound(SND_BAD_OPEN, vPos);
+	EmitAmbientSound(SND_BAD_OPEN, vPos, .level = SNDLEVEL_AIRCRAFT);
 	IgniteEntity(iEntity, 60.0);
 	for( int i = 1; i <= MaxClients; i++ )
 	{
@@ -2632,25 +2611,25 @@ void BlackWhite(int client)
 	SetEntProp(client, Prop_Send, "m_currentReviveCount", num);
 	if( g_bL4D2 ) SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", 1);
 	
+	EmitSoundToClient(client, SND_BAD_OPEN);
 	PrintToChat(client, "%s You have obtained \x03black and white\x01.", CHAT_TAG);
 } 
 
 void GiveFragility(int client)
 {
+	EmitSoundToClient(client, SND_BAD_OPEN);
 	// Player is invulnerable, remove only the boost
 	if( g_iPlayerBoosts[client] & PB_INVUL )
 	{
 		delete g_hPlayerInvulTimer[client];
 		g_iPlayerBoosts[client] &= ~PB_INVUL;
 		SDKUnhook(client, SDKHook_OnTakeDamage, Invulnerability_Callback);
-		EmitSoundToClient(client, SND_BAD_OPEN);
 		PrintToChat(client, "%s You have obtained\x03fragility\x01, your \x03invulnerability\x01 has been removed.", CHAT_TAG);
 	}
 	else if( g_iPlayerBoosts[client] & PN_FRAGILE )
 	{
 		delete g_hPlayerFragileTimer[client];
 		g_hPlayerFragileTimer[client] = CreateTimer(g_fNerfTimes[1], PlayerFragile_Timer, client);
-		EmitSoundToClient(client, SND_BAD_OPEN);
 		PrintToChat(client, "%s You have extended your \x03fragility\x01 effect.", CHAT_TAG);
 	}
 	else
@@ -2658,7 +2637,6 @@ void GiveFragility(int client)
 		g_iPlayerBoosts[client] |= PN_FRAGILE;
 		g_hPlayerFragileTimer[client] = CreateTimer(g_fNerfTimes[1], PlayerFragile_Timer, client);
 		SDKHook(client, SDKHook_OnTakeDamage, Fragility_Callback);
-		EmitSoundToClient(client, SND_BAD_OPEN);
 		PrintToChat(client, "%s You have found \x03fragility\x01 effect.", CHAT_TAG);
 	}
 }
@@ -2668,7 +2646,10 @@ void BearTrap(int client, float vPos[3])
 	PrintToChat(client, "%s You have opened a \x03bear trap\x01.", CHAT_TAG);
 	SDKHooks_TakeDamage(client, client, client, 10.0, 0, -1, NULL_VECTOR, NULL_VECTOR);
 	SU_AddBleed(client, g_hBleedHits.IntValue);
-	EmitAmbientSound(SND_BEARTRAP, vPos);
+	if( g_bL4D2 )
+		EmitAmbientSound(SND_BEARTRAP, vPos, .level = SNDLEVEL_AIRCRAFT);
+	else
+		EmitAmbientSound(SND_BEARTRAP_1, vPos, .level = SNDLEVEL_AIRCRAFT);
 }
 
 void RandomAngles(int client)
@@ -2680,6 +2661,7 @@ void RandomAngles(int client)
 		return;
 	}
 	g_iPlayerBoosts[client] |= PN_ANGLES;
+	EmitSoundToClient(client, SND_BAD_OPEN);
 	PrintToChat(client, "%s You have obtained \x03random orientation\x01.",CHAT_TAG);
 	g_hPlayerAnglesTimer[client] = CreateTimer(2.0, PlayerAngles_Timer, client);
 }
@@ -2749,10 +2731,10 @@ void MakeTitanZombies(int client)
 		// Scale healths
 		int health = GetEntProp(zombie, Prop_Data, "m_iHealth");
 		int maxHealth = GetEntProp(zombie, Prop_Data, "m_iMaxHealth");
-		SetEntProp(zombie, Prop_Data, "m_iHealth", health * 4);
-		SetEntProp(zombie, Prop_Data, "m_iMaxHealth", maxHealth * 4);
+		SetEntProp(zombie, Prop_Data, "m_iHealth", health * 6);
+		SetEntProp(zombie, Prop_Data, "m_iMaxHealth", maxHealth * 6);
 		// Scale size
-		SetEntPropFloat(zombie, Prop_Send,"m_flModelScale", 3.0); 
+		SetEntPropFloat(zombie, Prop_Send,"m_flModelScale", 1.6); 
 	}
 	for( int i = 1; i <= MaxClients; i++ )
 	{
@@ -2760,6 +2742,7 @@ void MakeTitanZombies(int client)
 			PrintToChat(i, "%s \x03%N\x01 has found a \x03full titan zombies\x01.", CHAT_TAG, client);
 	}
 	PrintToChat(client, "%s You have found a \x03titan zombies\x01.", CHAT_TAG);
+	EmitSoundToAll(SND_BAD_OPEN);
 }
 /* ========================================================================================= *
  *                                     Weapon Handling                                       *
@@ -3013,29 +2996,36 @@ void ResetClientData(int client)
 /*============================================================================================
                                           Changelog
 ----------------------------------------------------------------------------------------------
+* 1.3   (18-Apr-2023)
+	- Added ammo crate good event.
+	- Added more box sound effects.
+	- Fixed explosive shots not using external plugin and causing bugs.
+	- Fixed Infinity Gauntlet not kiling/hurting special infected or tanks.
+	- Fixed bug in reversed controls beign unable to do anything apart of moving.
+	- Fixed bugs in notification endings.
 * 1.2   (03-Apr-2023)
-		- Fixed code for SM 1.11.
-		- Lootbox event weights moved to a config file instead of storing in ConVars.
-		- Added new events: "Titan zombies" and "Survivor resurrection".
-		- Fixed bug on "Fragility" event where effect never ended.
-		- Fixed bugs in plugin messages.
-		- Fixed plugin errors on tank death.
-		- Fixed errors with timer handles when player disconnects.
-		- Fixed black and white code errors on Left 4 Dead.
+	- Fixed code for SM 1.11.
+	- Lootbox event weights moved to a config file instead of storing in ConVars.
+	- Added new events: "Titan zombies" and "Survivor resurrection".
+	- Fixed bug on "Fragility" event where effect never ended.
+	- Fixed bugs in plugin messages.
+	- Fixed plugin errors on tank death.
+	- Fixed errors with timer handles when player disconnects.
+	- Fixed black and white code errors on Left 4 Dead.
 * 1.1.1  (17-Jun-2022)
-		- Fixed errors in message prints.
-		- Fixed a bug in reverse controls where player couldn't use other buttons apart of movement buttons.
-		- Fixed array index out of bounds for player death event.
-		- Modified default special drop chances.
+	- Fixed errors in message prints.
+	- Fixed a bug in reverse controls where player couldn't use other buttons apart of movement buttons.
+	- Fixed array index out of bounds for player death event.
+	- Modified default special drop chances.
 * 1.1	(16-Jun-2022)
-		- Merged Left 4 Dead and Left 4 Dead 2 plugin files.
-		- Fixed error with Toxic Cloud that limited the amount of clouds per round to 8.
-		- Fixed error where infinite ammo boost was not working properly.
-        - Optimized client weapon check for infinte ammo boost.
-		- Fixed warning messages for SM 1.11
-		- Added new ConVar (l4d2_lootbox_fragility_multiplier).
-		- Removed public function declarations where they where not required.
+	- Merged Left 4 Dead and Left 4 Dead 2 plugin files.
+	- Fixed error with Toxic Cloud that limited the amount of clouds per round to 8.
+	- Fixed error where infinite ammo boost was not working properly.
+	- Optimized client weapon check for infinte ammo boost.
+	- Fixed warning messages for SM 1.11
+	- Added new ConVar (l4d2_lootbox_fragility_multiplier).
+	- Removed public function declarations where they where not required.
 		
 * 1.0	(14-Jun-2022)
-		- Initial release.
+	- Initial release.
 ============================================================================================*/
