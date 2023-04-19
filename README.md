@@ -52,5 +52,14 @@ Tanks and witches can drop multiple lootboxes.
 - [Explosive Shots](https://forums.alliedmods.net/showthread.php?t=342301)
 
 ## Installation
-- Put **l4d_lootboxes.smx** in your *sourcemod/plugins* folder.
-- Put **lootboxes_weights.cfg** in your *sourcemod/data* folder.
+1. Put **l4d_lootboxes.smx** in your *`sourcemod/plugins`* folder.
+2. Put **lootboxes_weights.cfg** in your *`sourcemod/data`* folder.
+3. Restart the server or type `sm plugins load l4d_zspawn` in the console to load the plugin.
+4. The config file will be automatically generated in `cfg/sourcemod/`
+
+## Usage ##
+
+### Admin Commands ###
+
+* ```sm_lootbox_spawn <amount>``` : Spawns lootboxes on your crosshair position
+*  ```sm_lootbox_wipe``` : Removes all Loot Boxes and weapon spawned
