@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------------------- *
  *  Author      :   Eärendil                                                                *
  *  Descrp      :   Zombies drop boxes with good or bad results                             *
- *  Version     :   1.2                                                                     *
+ *  Version     :   1.3                                                                     *
  *  Link        :   https://forums.alliedmods.net/showthread.php?p=2781646#post2781646      *
  * ======================================================================================== *
  *                                                                                          *
@@ -34,7 +34,7 @@
 #include <weaponhandling>
 #include <l4d_explosiveshots>
 
-#define PLUGIN_VERSION		"1.2"
+#define PLUGIN_VERSION		"1.3-SNAPSHOT"
 #define FCVAR_FLAGS			FCVAR_NOTIFY
 // Limit entities to prevent server crashes due to entity limit
 #define MAX_LBOXES			64
