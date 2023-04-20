@@ -1,7 +1,20 @@
 ## Release Notes
 
+## Version 1.3 ()
+<details>
+	<summary>Click to expand</summary>
+
+### Added
+
+### Fixed
+
+
+</details>
 
 ## Version 1.2 (03-Apr-2023)
+<details>
+	<summary>Click to expand</summary>
+
 ### Added
 - New events: "Survivor resurrection" and "Titan zombies".
 - Event weights stored in their own config file.
@@ -17,9 +30,11 @@
   
 ### Removed
 - Event weight ConVars.
-
+</details>
 
 ## Version 1.1.1 (17-Jun-2022)
+<details>
+	<summary>Click to expand</summary>
 
 ### Fixed
 
@@ -27,8 +42,11 @@
 - Fixed a bug in reverse controls where player couldn't use other buttons apart of movement buttons.
 - Fixed array index out of bounds for player death event.
 - Modified default special drop chances.
+</details>
 
 ## Version 1.1 (16-Jun-2022)
+<details>
+	<summary>Click to expand</summary>
 
 ### Added
 
@@ -45,7 +63,7 @@
 ### Removed
 
 - Public function declarations where they where not required.
-  
+</details>
 
 ## Version 1.0 (14-Jun-2022)
 
