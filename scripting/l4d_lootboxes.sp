@@ -83,7 +83,8 @@
 #define SND_SHIELD_1		"physics/metal/metal_barrel_impact_soft1.wav"
 #define SND_BEARTRAP_1		"doors/door_metal_thin_close2.wav"
 // Default config filename
-#define DEFAULT_CFG			"data/lootboxes_weights.cfg"
+#define DEFAULT_WEIGHT		"data/lootboxes_weights.cfg"
+#define DEFAULT_SETTINGS	"data/lootboxes_settings.cfg"	
 
 #define SI_CHANCES			"8.0,8.0,8.0,8.0,8.0,8.0"			// 6 values, one for each special
 #define BOOST_TIMES			"30.0,25.0,20.0,30.0,25.0,15.0"		// 6 values
@@ -244,24 +245,12 @@ int g_iTankDrops[2];
 int g_iWitchDrops[2];
 
 // Plugin ConVars
-ConVar g_hBoxLifeTime;
 ConVar g_hPosProb;
-ConVar g_hBoostTimes;
-ConVar g_hNerfTimes;
 ConVar g_hSpecialDrops;
 ConVar g_hTankDrops;
 ConVar g_hWitchDrops;
-ConVar g_hWeaponLife;
-ConVar g_hWeaponLock;
-ConVar g_hMobSize;
-ConVar g_hMegaMobSize;
-ConVar g_hToxCloudLife;
-ConVar g_hIntoxChance;
-ConVar g_hToxicHits;
-ConVar g_hBleedHits;
-ConVar g_hFreezeTime;
-ConVar g_hFragilityMult;
-ConVar g_hConfigFile;
+ConVar g_hWeightFile;
+ConVar g_hSettingFile;
 
 // Player variables & handles
 bool g_bPlayerAdvert[MAXPLAYERS + 1];
@@ -283,6 +272,28 @@ Handle g_hPlayerAnglesTimer[MAXPLAYERS + 1];
 // Some global variables
 int g_iNextMobSize = -1; // To override mob sizes
 bool g_bL4D2;
+float g_fBoxLifeTime;
+float g_fWeaponLife;
+float g_fTimeSpeed;
+float g_fTimeInvul;
+float g_fTimeRegen;
+float g_fTimeFire;
+float g_fTimeIAmmo;
+float g_fTimeExpShot;
+float g_fTimeReverse;
+float g_fTimeFragile;
+float g_fTimeRAngle;
+float g_fTimeCloud;
+float g_fTimeFreeze;
+float g_fLockTime;
+float g_fToxChance;
+float g_fFragMult;
+float g_fTitanScale;
+float g_fTitanHealth;
+int g_iToxHits;
+int g_iBleedHits;
+int g_iMobSize;
+int g_iPanicSize;
 
 public Plugin myinfo =
 {
@@ -312,13 +323,9 @@ public void OnPluginStart()
 	
 	g_hAllow =			CreateConVar("l4d_lootbox_enable",					"1",				"1 = Plugin On. 0 = Plugin Off.", FCVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hGameModes =		CreateConVar("l4d_lootbox_gamemodes",				"",					"Enable plugin in these gamemodes, separated by commas, no spaces.\nEmpty to allow all.", FCVAR_FLAGS);
-	g_hConfigFile = 	CreateConVar("l4d_lootbox_weightsfile",			DEFAULT_CFG,			"Name of the weights config file to load", FCVAR_FLAGS);
-
-	g_hBoxLifeTime =	CreateConVar("l4d_lootbox_lifetime",				"30.0",				"Lifetime of the Loot Boxes in seconds.", FCVAR_FLAGS, true, 10.0, true, 60.0);
+	g_hWeightFile = 	CreateConVar("l4d_lootbox_weightsfile",			DEFAULT_WEIGHT,			"Name of the weights file to load", FCVAR_FLAGS);
+	g_hSettingFile = 	CreateConVar("l4d_lootbox_configfile",			DEFAULT_SETTINGS,			"Name of the config file to load", FCVAR_FLAGS);
 	g_hPosProb =		CreateConVar("l4d_lootbox_positive_chance",			"50.0",				"Chance in % to have a good Loot Box opening.", FCVAR_FLAGS, true, 0.0, true, 100.0);
-
-	g_hBoostTimes =		CreateConVar("l4d_lootbox_boost_durations",			BOOST_TIMES,		"Duration of good Box boosts in seconds.\n6 values, separated by commas, no spaces.\n<Speed,Invulnerability,Regeneration,FireDamage,InfiniteAmmo,ExplosiveShots>.", FCVAR_FLAGS);
-	g_hNerfTimes =		CreateConVar("l4d_lootbox_nerf_durations",			NERF_TIMES,			"Duration of bad Box nerfs in seconds.\n13 values, separated by commmas, no spaces.\n<ReverseControls,Fragility,RandomAngles>\nIf one value is placed, it will be set for all the durations.", FCVAR_FLAGS);
 	if( g_bL4D2 )
 	{
 		g_hSpecialDrops =	CreateConVar("l4d_lootbox_special_drop_chance",		SI_CHANCES,			"Chance to drop a LootBox when a Special infected dies.\n1|6 values, separated by commas, no spaces, values from 0.0 to 100.0\nOrder:<smoker,boomer,hunter,spitter,jockey,charger>\nIf one value is placed, it will be set for all SI.", FCVAR_FLAGS);	
@@ -329,19 +336,6 @@ public void OnPluginStart()
 	}
 	g_hTankDrops =		CreateConVar("l4d_lootbox_tank_drops",				"1,3",				"Min and max amount of lootboxes dropped when a tank dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
 	g_hWitchDrops =		CreateConVar("l4d_lootbox_witch_drops",				"1,2",				"Min and max amount of lootboxes dropped when a witch dies.\n1|2 values, separated by commas, no spaces.\nIf 1 value is placed, max and min values will be the same.", FCVAR_FLAGS);
-
-	g_hWeaponLock =		CreateConVar("l4d_lootbox_weapon_lock",				"5.0",				"Prevent bots to steal weapons/items this amount of time (0.0 to disable).", FCVAR_FLAGS, true, 0.0, true, 15.0);
-	g_hWeaponLife =		CreateConVar("l4d_lootbox_weapon_lifetime",			"20.0",				"Lifetime of the weapons/items in boxes, in seconds.", FCVAR_FLAGS, true, 15.0, true, 60.0);
-
-	g_hToxCloudLife =	CreateConVar("l4d_lootbox_toxicloud_lifetime",		"40",				"Lifetime of the toxic cloud in seconds.", FCVAR_FLAGS, true, 10.0, true, 240.0);
-	g_hIntoxChance = 	CreateConVar("l4d_lootbox_intoxication_chance",		"15.0",				"Chance for a survivor to get intoxicated when receiving toxic cloud damage.", FCVAR_FLAGS, true, 0.0, true, 100.0);
-	g_hToxicHits =		CreateConVar("l4d_lootbox_toxichits",				"50",				"Amount of toxic hits that an intoxicated survivor will receive after intoxication.", FCVAR_FLAGS, true, 1.0);
-	g_hBleedHits =		CreateConVar("l4d_lootbox_bleedhits",				"30",				"Amount of bleed hits that survivors will get after opening a bear trap.", FCVAR_FLAGS, true, 1.0);
-	g_hFreezeTime =		CreateConVar("l4d_lootbox_freezetime",				"10.0",				"Amount of time in seconds that survivors will be frozen with the freeze trap.", FCVAR_FLAGS, true, 1.0);
-	g_hFragilityMult =	CreateConVar("l4d_lootbox_fragility_multiplier",	"5.0",				"Multiply the damage received by survivor under fragility by this amount.", FCVAR_FLAGS, true, 1.0);
-
-	g_hMobSize =		CreateConVar("l4d_lootbox_mob_size",				"80",				"Size of mob obtained from LootBox.", FCVAR_FLAGS, true, 20.0);
-	g_hMegaMobSize =	CreateConVar("l4d_lootbox_megamob_size",			"140",				"Size of megamob obtained from LootBox", FCVAR_FLAGS, true, 30.0);
 	g_hCurrGamemode =	FindConVar("mp_gamemode");
 	
 	g_hAllow.AddChangeHook(CvarChange_Enable);
@@ -349,8 +343,8 @@ public void OnPluginStart()
 	g_hCurrGamemode.AddChangeHook(CvarChange_Enable);
 	g_hSpecialDrops.AddChangeHook(CVarChange_Drops);
 	g_hTankDrops.AddChangeHook(CVarChange_Drops);
-	g_hBoostTimes.AddChangeHook(CVarChange_Times);
-	g_hNerfTimes.AddChangeHook(CVarChange_Times);
+	g_hWeightFile.AddChangeHook(CVarChange_Files);
+	g_hSettingFile.AddChangeHook(CVarChange_Files);
 	
 	RegAdminCmd("sm_lootbox_spawn", AdminSpawnBox, ADMFLAG_KICK, "Spawn Lootboxes at your crosshair position.");
 	RegAdminCmd("sm_lootbox_wipe", AdminWipeEnts, ADMFLAG_KICK, "Remove boxes and weapons generated by plugin.");
@@ -421,9 +415,8 @@ public void OnConfigsExecuted()
 {
 	GetGameMode();
 	SwitchPlugin();
-	LoadWeights();
+	LoadFiles();
 	GetDrops();
-	GetBoostTimes();
 }
 
 public void OnClientConnected(int client)
@@ -470,28 +463,23 @@ public void OnPluginEnd()
  *                                       ConVars                                             *
  * ========================================================================================= */
 
-public void CvarChange_Enable(Handle conVar, const char[] oldValue, const char[] newValue)
+void CvarChange_Enable(Handle conVar, const char[] oldValue, const char[] newValue)
 {
 	GetGameMode();
 	SwitchPlugin();
 }
 
-public void CVarChange_Weights(Handle conVar, const char[] oldValue, const char[] newValue)
+void CVarChange_Files(Handle conVar, const char[] oldValue, const char[] newValue)
 {
-	LoadWeights();
+	LoadFiles();
 }
 
-public void CVarChange_Drops(Handle conVar, const char[] oldValue, const char[] newValue)
+void CVarChange_Drops(Handle conVar, const char[] oldValue, const char[] newValue)
 {
 	GetDrops();
 }
 
-public void CVarChange_Times(Handle conVar, const char[] oldValue, const char[] newValue)
-{
-	GetBoostTimes();
-}
-
-// Gets the current gamemode and evalates if its valid
+// Gets the current gamemode and evaluates if its valid
 void GetGameMode()
 {
 	char sCurrGameMode[32], sGameModes[128];
@@ -560,12 +548,17 @@ void SwitchPlugin()
 	}
 }
 
-void LoadWeights()
+void LoadFiles()
 {
 	char sFileName[32];
-	g_hConfigFile.GetString(sFileName, sizeof(sFileName));
-	if( !ReadCfgFile(sFileName) )
-		SetFailState("Error loading weights config file.");
+
+	g_hWeightFile.GetString(sFileName, sizeof(sFileName));
+	if( !ReadWeightsFile(sFileName) )
+		SetFailState("Error loading weights file.");
+
+	g_hSettingFile.GetString(sFileName, sizeof(sFileName));
+	if( !ReadSettingsFile(sFileName) )
+		SetFailState("Error loading config file.");
 }
 
 void GetDrops()
@@ -639,58 +632,27 @@ void GetDrops()
 	}
 }
 
-void GetBoostTimes()
-{
-	char sConVar[128];
-	char sBuffer[8][8];
-	int iArrSize;
-	
-	g_hBoostTimes.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 6 && iArrSize != 1 )
-	{
-		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 6|1, found %d", SERVER_TAG, iArrSize);
-		ExplodeString(BOOST_TIMES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
-		g_hBoostTimes.RestoreDefault(false, false);
-	}
-	for( int i = 0; i < 6; i++ )
-	{
-		g_fBoostTimes[i] = iArrSize == 1 ? g_hBoostTimes.FloatValue : StringToFloat(sBuffer[i]);
-		if( g_fBoostTimes[i] < 0.1 )
-			g_fBoostTimes[i] = 0.1;
-	}
-	g_hNerfTimes.GetString(sConVar, sizeof(sConVar));
-	if( (iArrSize = ExplodeString( sConVar, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]) )) != 3 && iArrSize != 1 )
-	{
-		PrintToServer("%sWarning: Invalid ConVar <l4d_lootbox_boost_durations> value amount. Expected 2|1, found %d", SERVER_TAG, iArrSize);
-		ExplodeString(NERF_TIMES, ",", sBuffer, sizeof(sBuffer), sizeof(sBuffer[]));
-		g_hNerfTimes.RestoreDefault(false, false);
-	}
-	g_fNerfTimes[0] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[0]);
-	g_fNerfTimes[1] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[1]);
-	g_fNerfTimes[2] = iArrSize == 1 ? g_hNerfTimes.FloatValue : StringToFloat(sBuffer[2]);
-}
-
 /* ========================================================================================= *
  *                                       FileReader                                          *
  * ========================================================================================= */
 
-bool ReadCfgFile(const char[] fileName)
+bool ReadWeightsFile(const char[] fileName)
 {
 	g_iPosWeightSum = 0;
 	g_iNegWeightSum = 0;
 
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), fileName);
-	bool bDefault = ( strncmp(fileName, DEFAULT_CFG, 26) == 0 ) ? true : false; // Check if is the default file
+	bool bDefault = ( strncmp(fileName, DEFAULT_WEIGHT, 26) == 0 ) ? true : false; // Check if is the default file
 	
 	if( !FileExists(sPath) )	// Throw warning/error if file doesn't exist.
 	{
 		if( !bDefault )
 		{
-			PrintToServer("%sWarning: Missing config file \"%s\", attempting default file.", SERVER_TAG, fileName);
-			return ReadCfgFile(DEFAULT_CFG);	// Attempt to read default file
+			PrintToServer("%sWarning: Missing weights file \"%s\", attempting default file.", SERVER_TAG, fileName);
+			return ReadWeightsFile(DEFAULT_WEIGHT);	// Attempt to read default file
 		}
-		PrintToServer("%sError: Missing default config file, plugin disabled.", SERVER_TAG);
+		PrintToServer("%sError: Missing default weights file, plugin disabled.", SERVER_TAG);
 		return false;	// Crash plugin
 	}
 
@@ -701,9 +663,9 @@ bool ReadCfgFile(const char[] fileName)
 		{
 			PrintToServer("%sWarning: Can't read \"%s\", attempting default file.", SERVER_TAG, fileName);
 			delete hKV;
-			return ReadCfgFile(DEFAULT_CFG);		
+			return ReadWeightsFile(DEFAULT_WEIGHT);		
 		}
-		PrintToServer("%sError: Can't read default config file, plugin disabled.", SERVER_TAG);
+		PrintToServer("%sError: Can't read default weights file, plugin disabled.", SERVER_TAG);
 		delete hKV;
 		return false;	
 	}
@@ -713,32 +675,32 @@ bool ReadCfgFile(const char[] fileName)
 	if( !AttemptKeyJump(hKV, sMainKey, fileName, bDefault) )
 	{
 		delete hKV;
-		return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+		return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 	}
 	if( g_bL4D2 )
 	{
 		if( !AttemptKeyJump(hKV, "positives", fileName, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 
 		if( !ParseValues(hKV, g_sPositives_2, sizeof(g_sPositives_2), fileName, g_iPosWeights, g_iPosWeightSum, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 		hKV.GoBack();
 		if( !AttemptKeyJump(hKV, "negatives", fileName, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 
 		if( !ParseValues(hKV, g_sNegatives_2, sizeof(g_sNegatives_2), fileName, g_iNegWeights, g_iNegWeightSum, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 	}
 	else
@@ -746,28 +708,117 @@ bool ReadCfgFile(const char[] fileName)
 		if( !AttemptKeyJump(hKV, "positives", fileName, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 
 		if( !ParseValues(hKV, g_sPositives, sizeof(g_sPositives), fileName, g_iPosWeights, g_iPosWeightSum, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 		hKV.GoBack();
 		if( !AttemptKeyJump(hKV, "negatives", fileName, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 
 		if( !ParseValues(hKV, g_sNegatives, sizeof(g_sNegatives), fileName, g_iNegWeights, g_iNegWeightSum, bDefault) )
 		{
 			delete hKV;
-			return bDefault ? false : ReadCfgFile(DEFAULT_CFG);
+			return bDefault ? false : ReadWeightsFile(DEFAULT_WEIGHT);
 		}
 	}
 	delete hKV;
+	return true;
+}
+
+bool ReadSettingsFile(const char[] fileName)
+{
+	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, sizeof(sPath), fileName);
+	bool bDefault = ( strncmp(fileName, DEFAULT_SETTINGS, 26) == 0 ) ? true : false; // Check if is the default file
+
+	if( !FileExists(sPath) )
+	{
+		if( !bDefault )
+		{
+			PrintToServer("%sWarning: Missing settings file \"%s\", attempting default file.", SERVER_TAG, fileName);
+			return ReadSettingsFile(DEFAULT_SETTINGS);	// Attempt to read default file
+		}
+		PrintToServer("%sError: Missing default settings file, plugin disabled.", SERVER_TAG);
+		return false;	// Crash plugin
+	}
+
+	KeyValues hKV = new KeyValues("settings");
+	if( !hKV.ImportFromFile(sPath) )	// Throw warning/error if file can't be opened
+	{
+		if( !bDefault )
+		{
+			PrintToServer("%sWarning: Can't read \"%s\", attempting default file.", SERVER_TAG, fileName);
+			delete hKV;
+			return ReadSettingsFile(DEFAULT_SETTINGS);		
+		}
+		PrintToServer("%sError: Can't read default settings file, plugin disabled.", SERVER_TAG);
+		delete hKV;
+		return false;	
+	}
+
+	if( !AttemptKeyJump(hKV, "General", fileName, bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
+	}
+
+	if( !ParseFloatFromFile(hKV, "lootbox_lifetime", fileName, g_fBoxLifeTime, 10.0, 60.0, bDefault) 
+	 || !ParseFloatFromFile(hKV, "weapon_lifetime", fileName, g_fWeaponLife, 15.0, 90.0, bDefault)
+	 || !ParseFloatFromFile(hKV, "weaponlock", fileName, g_fLockTime, .max = 15.0, .isDefault = bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
+	}
+
+	hKV.GoBack();
+	if( !AttemptKeyJump(hKV, "Durations", fileName, bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
+	}
+	if( !ParseFloatFromFile(hKV, "speedboost", fileName, g_fTimeSpeed, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "invulnerability", fileName, g_fTimeInvul, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "regeneration", fileName, g_fTimeRegen, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "firepower", fileName, g_fTimeFire, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "infiniteammo", fileName, g_fTimeIAmmo, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "explosiveshots", fileName, g_fTimeExpShot, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "reversecontrols", fileName, g_fTimeReverse, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "fragility", fileName, g_fTimeFragile, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "randomangles", fileName, g_fTimeRAngle, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "toxiccloud", fileName, g_fTimeCloud, 10.0, .isDefault = bDefault)
+	 || !ParseFloatFromFile(hKV, "freeze", fileName, g_fTimeFreeze, 10.0, .isDefault = bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
+	}
+
+	hKV.GoBack();
+	if( !AttemptKeyJump(hKV, "Settings", fileName, bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
+	}
+	if( !ParseFloatFromFile(hKV, "toxicchance", fileName, g_fToxChance, .max = 100.0, .isDefault = bDefault)
+	 || !ParseIntFromFile(hKV, "toxichits", fileName, g_iToxHits, 5, 100, bDefault)
+	 || !ParseIntFromFile(hKV, "bleedhits", fileName, g_iBleedHits, 5, 100, bDefault)
+	 || !ParseFloatFromFile(hKV, "fragilemult", fileName, g_fFragMult, 1.5, 10.0, bDefault)
+	 || !ParseFloatFromFile(hKV, "titansizescale", fileName, g_fTitanScale, 1.0, 5.0, bDefault)
+	 || !ParseFloatFromFile(hKV, "titanhpscale", fileName, g_fTitanHealth, 1.0, 50.0, bDefault)
+	 || !ParseIntFromFile(hKV, "mobsize", fileName, g_iMobSize, 30, 500, bDefault)
+	 || !ParseIntFromFile(hKV, "panicsize", fileName, g_iPanicSize, 30, 500, bDefault) )
+	{
+		delete hKV;
+		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
+	}	 
+
 	return true;
 }
 
@@ -799,6 +850,34 @@ bool ParseValues(KeyValues kv, const char[][] keyNames, int length, const char[]
 		sumatory += destArray[i];
 		kv.GoBack();
 	}
+	return true;
+}
+
+bool ParseFloatFromFile(KeyValues kv, const char[] keyName, const char[] fileName, float &value, float min = 0.0, float max = -1.0, bool isDefault)
+{
+	if( !AttemptKeyJump(kv, keyName, fileName, isDefault) )
+	return false;
+
+	float buffer = kv.GetFloat(NULL_STRING);
+	if( buffer < min ) buffer = min;
+	if( max > 0.0 && buffer > max ) buffer = max;
+	value = buffer;
+
+	kv.GoBack();
+	return true;
+}
+
+bool ParseIntFromFile(KeyValues kv, const char[] keyName, const char[] fileName, int &value, int min = 0, int max = 0, bool isDefault = true)
+{
+	if( !AttemptKeyJump(kv, keyName, fileName, isDefault) )
+	return false;
+
+	int buffer = kv.GetNum(NULL_STRING);
+	if( buffer < min ) buffer = min;
+	if( max > 0 && buffer > max ) buffer = max;
+	value = buffer;
+
+	kv.GoBack();
 	return true;
 }
 
@@ -1062,7 +1141,7 @@ Action Fragility_Callback(int victim, int& attacker, int& inflictor, float& dama
 			return Plugin_Continue;
 	}
 	
-	damage *= g_hFragilityMult.FloatValue;
+	damage *= g_fFragMult;
 	return Plugin_Changed;
 }
 
@@ -1337,8 +1416,12 @@ Action ToxicCloud_Timer(Handle timer, int arrPos)
 		{
 			SDKHooks_TakeDamage(i, i, i, 4.0, 0, -1, NULL_VECTOR, NULL_VECTOR);
 			EmitSoundToClient(i, SND_CHOKE);
-			if( !SU_IsToxic(i) && !IsFakeClient(i) && GetRandomFloat(0.0,100.0) <= g_hIntoxChance.FloatValue )
-				SU_AddToxic(i, g_hToxicHits.IntValue); 
+			if( g_fToxChance > 0.0 )
+			{
+				if( !SU_IsToxic(i) && !IsFakeClient(i) && g_fToxChance > GetRandomFloat(0.0, 100.0) )
+					SU_AddToxic(i, g_iToxHits); 
+			}
+
 		}
 	}
 	if( --g_iToxCloudCounter[arrPos] > 0 )
@@ -1527,7 +1610,7 @@ bool SpawnLootBox(float origin[3], float angles[3], float force[3])
 	{
 		g_iLootBoxEnt[index] = EntIndexToEntRef(entity);
 		delete g_hLootBoxTimer[index];	// Just in the case the timer has not been deleted yet!
-		g_hLootBoxTimer[index] = CreateTimer(g_hBoxLifeTime.FloatValue, BoxLife_Timer, index); // Parse the array index
+		g_hLootBoxTimer[index] = CreateTimer(g_fBoxLifeTime, BoxLife_Timer, index); // Parse the array index
 
 		DispatchKeyValue(entity, "model", MODEL_BOX);
 		DispatchKeyValue(entity, "targetname", TN_BOX);
@@ -2114,7 +2197,7 @@ bool SpawnLaser(int client, float vPos[3])
 
 	g_iWeaponEnt[iArrPos] = EntIndexToEntRef(iEntity);
 	TeleportEntity(iEntity, vPos, NULL_VECTOR, NULL_VECTOR);
-	g_hWeaponDeleteTimer[iArrPos] = CreateTimer(g_hWeaponLife.FloatValue, WeaponDelete_Timer, iArrPos);
+	g_hWeaponDeleteTimer[iArrPos] = CreateTimer(g_fWeaponLife, WeaponDelete_Timer, iArrPos);
 	RequestFrame(WeaponSpawn_Frame, iArrPos);
 	for( int i = 1; i <= MaxClients; i++ )
 	{
@@ -2360,7 +2443,7 @@ void SpawnMob(int client, bool mega)
 				PrintToChat(i, "%s \x03%N\x01 has found a \x03panic event\x01.", CHAT_TAG, client);
 		}
 		PrintToChat(client, "%s You have found a \x03panic event\x01.", CHAT_TAG);
-		g_iNextMobSize = g_hMegaMobSize.IntValue;
+		g_iNextMobSize = g_iPanicSize;
 		EmitSoundToAll(SND_PANIC, SOUND_FROM_PLAYER);
 	}
 	else
@@ -2379,7 +2462,7 @@ void SpawnMob(int client, bool mega)
 	FakeClientCommand(client, "z_spawn_old %s", "mob");
 	SetCommandFlags("z_spawn_old", iComFlags);
 	if( g_iNextMobSize < 0 )
-		g_iNextMobSize = g_hMobSize.IntValue;
+		g_iNextMobSize = g_iMobSize;
 }
 
 void BoxTrap(int client, float vPos[3], bool isVomit)
@@ -2425,7 +2508,7 @@ void BoxTrap(int client, float vPos[3], bool isVomit)
 			L4D_StaggerPlayer(i, client, vPos);
 		}
 		else
-			SU_AddFreeze(i, g_hFreezeTime.FloatValue);
+			SU_AddFreeze(i, g_fTimeFreeze);
 	}
 	PrintToChat(client, "%s You have opened %s", CHAT_TAG, isVomit ? "a \x03vomit trap\x01." : "an \x03ice trap\x01.");
 }
@@ -2554,7 +2637,7 @@ bool ToxicCloud(int client, float vPos[3])
 			PrintToChat(i, "%s \x03%N\x01 has found a \x03toxic cloud\x01.", CHAT_TAG, client);
 	}
 	// Because each token is consumed each 2 seconds, divide the time of ConVar by 2
-	g_iToxCloudCounter[iArrPos] = g_hToxCloudLife.IntValue / 2;
+	g_iToxCloudCounter[iArrPos] = RoundToNearest(g_fTimeCloud / 2);
 	PrintToChat(client, "%s You have found a \x03toxic cloud\x01.", CHAT_TAG);
 	return true;
 }
@@ -2645,7 +2728,7 @@ void BearTrap(int client, float vPos[3])
 {
 	PrintToChat(client, "%s You have opened a \x03bear trap\x01.", CHAT_TAG);
 	SDKHooks_TakeDamage(client, client, client, 10.0, 0, -1, NULL_VECTOR, NULL_VECTOR);
-	SU_AddBleed(client, g_hBleedHits.IntValue);
+	SU_AddBleed(client, g_iBleedHits);
 	if( g_bL4D2 )
 		EmitAmbientSound(SND_BEARTRAP, vPos, .level = SNDLEVEL_AIRCRAFT);
 	else
@@ -2731,10 +2814,10 @@ void MakeTitanZombies(int client)
 		// Scale healths
 		int health = GetEntProp(zombie, Prop_Data, "m_iHealth");
 		int maxHealth = GetEntProp(zombie, Prop_Data, "m_iMaxHealth");
-		SetEntProp(zombie, Prop_Data, "m_iHealth", health * 6);
-		SetEntProp(zombie, Prop_Data, "m_iMaxHealth", maxHealth * 6);
+		SetEntProp(zombie, Prop_Data, "m_iHealth", health * g_fTitanHealth);
+		SetEntProp(zombie, Prop_Data, "m_iMaxHealth", maxHealth * g_fTitanHealth);
 		// Scale size
-		SetEntPropFloat(zombie, Prop_Send,"m_flModelScale", 1.6); 
+		SetEntPropFloat(zombie, Prop_Send,"m_flModelScale", g_fTitanScale); 
 	}
 	for( int i = 1; i <= MaxClients; i++ )
 	{
@@ -2852,11 +2935,10 @@ int WeaponSpawn(const char[] className, const char[] weaponType = "none")
 		return -1;
 	}
 	
-	float fTime;
-	if( (fTime = g_hWeaponLock.FloatValue) > 0.0 )
-		g_hWeaponUnlockTimer[iArrPos] = CreateTimer(fTime, WeaponUnlock_Timer, iArrPos);
+	if( g_fLockTime > 0.0 )
+		g_hWeaponUnlockTimer[iArrPos] = CreateTimer(g_fLockTime, WeaponUnlock_Timer, iArrPos);
 		
-	g_hWeaponDeleteTimer[iArrPos] = CreateTimer(g_hWeaponLife.FloatValue, WeaponDelete_Timer, iArrPos);
+	g_hWeaponDeleteTimer[iArrPos] = CreateTimer(g_fWeaponLife, WeaponDelete_Timer, iArrPos);
 	RequestFrame(WeaponSpawn_Frame, iArrPos);
 	SDKHook(iEntity, SDKHook_Use, Weapon_Used);
 	return iEntity;
