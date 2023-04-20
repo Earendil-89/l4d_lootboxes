@@ -239,8 +239,6 @@ Handle g_hWeaponDeleteTimer[MAX_WEAPONS];
 int g_iPosWeights[POS_SIZE], g_iPosWeightSum; // For positive rolls
 int g_iNegWeights[NEG_SIZE], g_iNegWeightSum; // For negative rolls
 float g_fSpecialDrops[6];
-float g_fBoostTimes[6];
-float g_fNerfTimes[3];
 int g_iTankDrops[2];
 int g_iWitchDrops[2];
 
@@ -558,7 +556,7 @@ void LoadFiles()
 
 	g_hSettingFile.GetString(sFileName, sizeof(sFileName));
 	if( !ReadSettingsFile(sFileName) )
-		SetFailState("Error loading config file.");
+		SetFailState("Error loading settings file.");
 }
 
 void GetDrops()
@@ -801,7 +799,7 @@ bool ReadSettingsFile(const char[] fileName)
 	}
 
 	hKV.GoBack();
-	if( !AttemptKeyJump(hKV, "Settings", fileName, bDefault) )
+	if( !AttemptKeyJump(hKV, "Event_Settings", fileName, bDefault) )
 	{
 		delete hKV;
 		return bDefault ? false : ReadSettingsFile(DEFAULT_SETTINGS);
@@ -1647,7 +1645,7 @@ Action LootBox_Used(int entity, int caller, int activator, UseType type, float v
 	
 	// Lets open the lootbox
 	int entRef = EntIndexToEntRef(entity);
-	// Instead of storing the lootbox reference somewhere wasting memory, search the reference in the array of lootboxes
+
 	for( int i = 0; i < MAX_LBOXES; i++ )
 	{
 		if( g_iLootBoxEnt[i] == entRef )
@@ -2213,7 +2211,7 @@ void GivePlayerSpeed(int client)
 	if( CheckPlayerBoost(client, PB_SPEED) )
 	{
 		delete g_hPlayerSpeedTimer[client];
-		g_hPlayerSpeedTimer[client] = CreateTimer(g_fBoostTimes[0], PlayerSpeed_Timer, client);
+		g_hPlayerSpeedTimer[client] = CreateTimer(g_fTimeSpeed, PlayerSpeed_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03speed boost\x01.", CHAT_TAG);
 		return;
 	}
@@ -2221,7 +2219,7 @@ void GivePlayerSpeed(int client)
 	SU_SetSpeed(client, SPEED_RUN, SU_GetSpeed(client, SPEED_RUN) * 1.2);
 	SU_SetSpeed(client, SPEED_LIMP, SU_GetSpeed(client, SPEED_LIMP) * 1.2);
 	SU_SetSpeed(client, SPEED_CRITICAL, SU_GetSpeed(client, SPEED_CRITICAL) * 1.2);
-	g_hPlayerSpeedTimer[client] = CreateTimer(g_fBoostTimes[0], PlayerSpeed_Timer, client);
+	g_hPlayerSpeedTimer[client] = CreateTimer(g_fTimeSpeed, PlayerSpeed_Timer, client);
 	g_iPlayerBoosts[client] |= PB_SPEED;
 	PrintToChat(client, "%s You have obtained \x03speed boost\x01.", CHAT_TAG);
 	
@@ -2235,20 +2233,20 @@ void GivePlayerInvulnerability(int client)
 	if( CheckPlayerBoost(client, PB_INVUL) )
 	{
 		delete g_hPlayerInvulTimer[client];
-		g_hPlayerInvulTimer[client] = CreateTimer(g_fBoostTimes[1], PlayerInvul_Timer, client);
+		g_hPlayerInvulTimer[client] = CreateTimer(g_fTimeInvul, PlayerInvul_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03invulnerability\x01.", CHAT_TAG);
 		return;
 	}
 	
 	SDKHook(client, SDKHook_OnTakeDamage, Invulnerability_Callback);
-	g_hPlayerInvulTimer[client] = CreateTimer(g_fBoostTimes[1], PlayerInvul_Timer, client);
+	g_hPlayerInvulTimer[client] = CreateTimer(g_fTimeInvul, PlayerInvul_Timer, client);
 	g_iPlayerBoosts[client] |= PB_INVUL;
 	PrintToChat(client, "%s You have obtained \x03invulnerability\x01.", CHAT_TAG);
 }
 
 void GivePlayerRegen(int client)
 {
-	g_iPlayerRegenToken[client] = RoundToNearest(g_fBoostTimes[2] * 2);
+	g_iPlayerRegenToken[client] = RoundToNearest(g_fTimeRegen * 2);
 	if( CheckPlayerBoost(client, PB_REGEN) )
 	{
 		PrintToChat(client, "%s You have extended your \x03regeneration\x01.", CHAT_TAG);
@@ -2270,13 +2268,13 @@ void GivePlayerFire(int client)
 	if( CheckPlayerBoost(client, PB_FIRE) )
 	{
 		delete g_hPlayerFireTimer[client];
-		g_hPlayerFireTimer[client] = CreateTimer(g_fBoostTimes[3], PlayerFire_Timer, client);
+		g_hPlayerFireTimer[client] = CreateTimer(g_fTimeFire, PlayerFire_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03fire power\x01.", CHAT_TAG);
 		return;
 	}
 	
 	EmitSoundToClient(client, SND_FIRE);
-	g_hPlayerFireTimer[client] = CreateTimer(g_fBoostTimes[3], PlayerFire_Timer, client);
+	g_hPlayerFireTimer[client] = CreateTimer(g_fTimeFire, PlayerFire_Timer, client);
 	g_iPlayerBoosts[client] = PB_FIRE;
 	PrintToChat(client, "%s You have obtained \x01fire power\x01.", CHAT_TAG);
 	
@@ -2290,12 +2288,12 @@ void GivePlayerInfAmmo(int client)
 	if( CheckPlayerBoost(client, PB_IAMMO) )
 	{
 		delete g_hPlayerAmmoTimer[client];
-		g_hPlayerAmmoTimer[client] = CreateTimer(g_fBoostTimes[4], PlayerInfAmmo_Timer, client);
+		g_hPlayerAmmoTimer[client] = CreateTimer(g_fTimeIAmmo, PlayerInfAmmo_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03infinite ammo\x01.", CHAT_TAG);
 		return;
 	}
 	
-	g_hPlayerAmmoTimer[client] = CreateTimer(g_fBoostTimes[4], PlayerInfAmmo_Timer, client);
+	g_hPlayerAmmoTimer[client] = CreateTimer(g_fTimeIAmmo, PlayerInfAmmo_Timer, client);
 	g_iPlayerBoosts[client] = PB_IAMMO;
 	PrintToChat(client, "%s You have obtained \x03infinite ammo\x01.", CHAT_TAG);
 }
@@ -2308,13 +2306,13 @@ bool GivePlayerExplosive(int client)
 	if( CheckPlayerBoost(client, PB_EXPL) )
 	{
 		delete g_hPlayerExplTimer[client];
-		g_hPlayerExplTimer[client] = CreateTimer(g_fBoostTimes[5], PlayerExpl_Timer, client);
+		g_hPlayerExplTimer[client] = CreateTimer(g_fTimeExpShot, PlayerExpl_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03explosive shots\x01.", CHAT_TAG);
 	}
 	else
 	{
 		g_iPlayerBoosts[client] |= PB_EXPL;
-		g_hPlayerExplTimer[client] = CreateTimer(g_fBoostTimes[5], PlayerExpl_Timer, client);
+		g_hPlayerExplTimer[client] = CreateTimer(g_fTimeExpShot, PlayerExpl_Timer, client);
 		L4D_ExplosiveShots_Set(client, Mode_Force);
 		PrintToChat(client, "%s You have obtained \x03explosive shots\x01.", CHAT_TAG);
 	}
@@ -2518,11 +2516,11 @@ void ReverseControls(int client)
 	if( g_iPlayerBoosts[client] & PN_REVERSE)
 	{
 		delete g_hPlayerReverseTimer[client];
-		g_hPlayerReverseTimer[client] = CreateTimer(g_fNerfTimes[0], PlayerReverse_Timer, client);
+		g_hPlayerReverseTimer[client] = CreateTimer(g_fTimeReverse, PlayerReverse_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03reversed controls\x01.", CHAT_TAG);
 		return;
 	}
-	g_hPlayerReverseTimer[client] = CreateTimer(g_fNerfTimes[0], PlayerReverse_Timer, client);
+	g_hPlayerReverseTimer[client] = CreateTimer(g_fTimeReverse, PlayerReverse_Timer, client);
 	PrintToChat(client, "%s You have obtained \x03reversed controls\x01.", CHAT_TAG);
 	EmitSoundToClient(client, SND_BAD_OPEN);
 	g_iPlayerBoosts[client] |= PN_REVERSE;
@@ -2712,13 +2710,13 @@ void GiveFragility(int client)
 	else if( g_iPlayerBoosts[client] & PN_FRAGILE )
 	{
 		delete g_hPlayerFragileTimer[client];
-		g_hPlayerFragileTimer[client] = CreateTimer(g_fNerfTimes[1], PlayerFragile_Timer, client);
+		g_hPlayerFragileTimer[client] = CreateTimer(g_fTimeFragile, PlayerFragile_Timer, client);
 		PrintToChat(client, "%s You have extended your \x03fragility\x01 effect.", CHAT_TAG);
 	}
 	else
 	{
 		g_iPlayerBoosts[client] |= PN_FRAGILE;
-		g_hPlayerFragileTimer[client] = CreateTimer(g_fNerfTimes[1], PlayerFragile_Timer, client);
+		g_hPlayerFragileTimer[client] = CreateTimer(g_fTimeFragile, PlayerFragile_Timer, client);
 		SDKHook(client, SDKHook_OnTakeDamage, Fragility_Callback);
 		PrintToChat(client, "%s You have found \x03fragility\x01 effect.", CHAT_TAG);
 	}
@@ -2737,7 +2735,7 @@ void BearTrap(int client, float vPos[3])
 
 void RandomAngles(int client)
 {
-	g_fPlayerAngleTime[client] = GetGameTime() + g_fNerfTimes[2];
+	g_fPlayerAngleTime[client] = GetGameTime() + g_fTimeRAngle;
 	if( g_iPlayerBoosts[client] & PN_ANGLES )
 	{
 		PrintToChat(client, "%s You have extended your \x03random orientation\x01.", CHAT_TAG);
